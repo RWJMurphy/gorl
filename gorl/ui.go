@@ -1,4 +1,4 @@
-package main
+package gorl
 
 import (
 	"github.com/imdario/mergo"
@@ -79,21 +79,16 @@ func (ui UI) DrawRectangle(x1, y1, x2, y2 int, style BoxStyle) {
 }
 
 func (ui UI) Draw() {
-	w, h := termbox.Size()
-
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-	ui.DrawRectangle(0, 0, w-1, h-1, DefaultBoxStyle)
+
+	w, h := termbox.Size()
 	ui.PrintCentered(strings.Repeat("Hello, termbox. ", 4))
+	ui.DrawRectangle(0, 0, w-1, h-1, DefaultBoxStyle)
 	termbox.Flush()
 }
 
-func main() {
+func (ui UI) MainLoop() {
 	redraw := false
-	ui, err := NewUI()
-	if err != nil {
-		panic(err)
-	}
-	defer ui.Close()
 	ui.Draw()
 
 mainLoop:

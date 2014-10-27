@@ -1,18 +1,18 @@
 package main
 
 import (
+	"github.com/imdario/mergo"
+	"github.com/nsf/termbox-go"
 	"strings"
 	"unicode/utf8"
-	"github.com/nsf/termbox-go"
-	"github.com/imdario/mergo"
 )
 
 type UI struct{}
 
-type BoxStyle struct{
+type BoxStyle struct {
 	horizontal rune
-	vertical rune
-	corner rune
+	vertical   rune
+	corner     rune
 }
 
 var DefaultBoxStyle = BoxStyle{'-', '|', '+'}
@@ -32,7 +32,7 @@ func (ui UI) PutRune(x, y int, r rune) {
 }
 func (ui UI) PrintAt(x, y int, s string) {
 	for i, r := range s {
-		ui.PutRune(x + i, y, r)
+		ui.PutRune(x+i, y, r)
 	}
 }
 
@@ -66,11 +66,11 @@ func (ui UI) DrawRectangle(x1, y1, x2, y2 int, style BoxStyle) {
 		panic(err)
 	}
 
-	ui.DrawHorizontalLine(x1 + 1, y1, x2 - 1, style.horizontal)
-	ui.DrawHorizontalLine(x1 + 1, y2, x2 - 1, style.horizontal)
+	ui.DrawHorizontalLine(x1+1, y1, x2-1, style.horizontal)
+	ui.DrawHorizontalLine(x1+1, y2, x2-1, style.horizontal)
 
-	ui.DrawVerticalLine(x1, y1 + 1, y2 - 1, style.vertical)
-	ui.DrawVerticalLine(x2, y1 + 1, y2 - 1, style.vertical)
+	ui.DrawVerticalLine(x1, y1+1, y2-1, style.vertical)
+	ui.DrawVerticalLine(x2, y1+1, y2-1, style.vertical)
 
 	ui.PutRune(x1, y1, style.corner)
 	ui.PutRune(x1, y2, style.corner)
@@ -82,7 +82,7 @@ func (ui UI) Draw() {
 	w, h := termbox.Size()
 
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-	ui.DrawRectangle(0, 0, w - 1, h - 1, DefaultBoxStyle)
+	ui.DrawRectangle(0, 0, w-1, h-1, DefaultBoxStyle)
 	ui.PrintCentered(strings.Repeat("Hello, termbox. ", 4))
 	termbox.Flush()
 }
@@ -118,4 +118,3 @@ mainLoop:
 		}
 	}
 }
-

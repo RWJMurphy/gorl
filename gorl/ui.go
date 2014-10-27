@@ -7,7 +7,13 @@ import (
 	"unicode/utf8"
 )
 
-type UI struct{}
+type Paintable interface {
+	Paint()
+}
+
+type UI struct {
+	Paintables []Paintable
+}
 
 type BoxStyle struct {
 	horizontal rune
@@ -22,9 +28,69 @@ func (ui UI) Close() {
 }
 
 func NewUI() (*UI, error) {
-	ui := &UI{}
 	err := termbox.Init()
-	return ui, err
+	if err != nil {
+		return nil, err
+	}
+
+	w, h := termbox.Size()
+	ui := &UI{
+		nil,
+	}
+	messageWidget := &MessageLogWidget{
+		0, h - h/4,
+		w, h / 4,
+		strings.Repeat("Hello, termbox. ", 4),
+		ui,
+	}
+	mapWidget := &MapWidget{
+		0, 0,
+		w - w/4, h - h/4,
+		ui,
+	}
+	menuWidget := &MenuWidget{
+		w - w/4, 0,
+		w / 4, h - h/4,
+		ui,
+	}
+	ui.Paintables = []Paintable{
+		messageWidget,
+		mapWidget,
+		menuWidget,
+	}
+	return ui, nil
+}
+
+type MapWidget struct {
+	x, y int
+	w, h int
+	ui   *UI
+}
+
+func (w MapWidget) Paint() {
+	w.ui.PaintBorder(w.x, w.y, w.x+w.w-1, w.y+w.h-1, DefaultBoxStyle)
+}
+
+type MessageLogWidget struct {
+	x, y int
+	w, h int
+	s    string
+	ui   *UI
+}
+
+func (w MessageLogWidget) Paint() {
+	w.ui.PrintAt(w.x+1, w.y+1, w.s)
+	w.ui.PaintBorder(w.x, w.y, w.x+w.w-1, w.y+w.h-1, DefaultBoxStyle)
+}
+
+type MenuWidget struct {
+	x, y int
+	w, h int
+	ui   *UI
+}
+
+func (w MenuWidget) Paint() {
+	w.ui.PaintBorder(w.x, w.y, w.x+w.w-1, w.y+w.h-1, DefaultBoxStyle)
 }
 
 func (ui UI) PutRune(x, y int, r rune) {
@@ -43,19 +109,27 @@ func (ui UI) PrintCentered(s string) {
 	ui.PrintAt(mid_w-s_len/2, mid_h, s)
 }
 
-func (ui UI) DrawVerticalLine(x, y1, y2 int, r rune) {
-	for y := y1; y <= y2; y++ {
-		termbox.SetCell(x, y, r, termbox.ColorDefault, termbox.ColorDefault)
-	}
-}
-
-func (ui UI) DrawHorizontalLine(x1, y, x2 int, r rune) {
+func (ui UI) PaintBox(x1, y1, x2, y2 int, r rune) {
 	for x := x1; x <= x2; x++ {
-		termbox.SetCell(x, y, r, termbox.ColorDefault, termbox.ColorDefault)
+		for y := y1; y <= y2; y++ {
+			ui.PutRune(x, y, r)
+		}
 	}
 }
 
-func (ui UI) DrawRectangle(x1, y1, x2, y2 int, style BoxStyle) {
+func (ui UI) PaintVerticalLine(x, y1, y2 int, r rune) {
+	for y := y1; y <= y2; y++ {
+		ui.PutRune(x, y, r)
+	}
+}
+
+func (ui UI) PaintHorizontalLine(x1, y, x2 int, r rune) {
+	for x := x1; x <= x2; x++ {
+		ui.PutRune(x, y, r)
+	}
+}
+
+func (ui UI) PaintBorder(x1, y1, x2, y2 int, style BoxStyle) {
 	if x1 > x2 {
 		x1, x2 = x2, x1
 	}
@@ -66,11 +140,11 @@ func (ui UI) DrawRectangle(x1, y1, x2, y2 int, style BoxStyle) {
 		panic(err)
 	}
 
-	ui.DrawHorizontalLine(x1+1, y1, x2-1, style.horizontal)
-	ui.DrawHorizontalLine(x1+1, y2, x2-1, style.horizontal)
+	ui.PaintBox(x1+1, y1, x2-1, y1, style.horizontal)
+	ui.PaintBox(x1+1, y2, x2-1, y2, style.horizontal)
 
-	ui.DrawVerticalLine(x1, y1+1, y2-1, style.vertical)
-	ui.DrawVerticalLine(x2, y1+1, y2-1, style.vertical)
+	ui.PaintBox(x1, y1+1, x1, y2-1, style.vertical)
+	ui.PaintBox(x2, y1+1, x2, y2-1, style.vertical)
 
 	ui.PutRune(x1, y1, style.corner)
 	ui.PutRune(x1, y2, style.corner)
@@ -78,22 +152,25 @@ func (ui UI) DrawRectangle(x1, y1, x2, y2 int, style BoxStyle) {
 	ui.PutRune(x2, y2, style.corner)
 }
 
-func (ui UI) Draw() {
+func (ui UI) Paint() {
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 
-	w, h := termbox.Size()
-	ui.PrintCentered(strings.Repeat("Hello, termbox. ", 4))
-	ui.DrawRectangle(0, 0, w-1, h-1, DefaultBoxStyle)
+	//ui.PrintCentered(strings.Repeat("Hello, termbox. ", 4))
+	//ui.PaintBorder(0, 0, w-1, h-1, DefaultBoxStyle)
+
+	for _, p := range ui.Paintables {
+		p.Paint()
+	}
 	termbox.Flush()
 }
 
 func (ui UI) MainLoop() {
-	redraw := false
-	ui.Draw()
+	dirty := false
+	ui.Paint()
 
 mainLoop:
 	for {
-		redraw = false
+		dirty = false
 
 		event := termbox.PollEvent()
 		switch event.Type {
@@ -103,13 +180,13 @@ mainLoop:
 				break mainLoop
 			}
 		case termbox.EventResize:
-			redraw = true
+			dirty = true
 		case termbox.EventError:
 			panic(event.Err)
 		}
 
-		if redraw {
-			ui.Draw()
+		if dirty {
+			ui.Paint()
 		}
 	}
 }

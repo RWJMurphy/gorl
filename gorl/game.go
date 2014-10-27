@@ -1,6 +1,6 @@
 package gorl
 
-type Game struct{
+type Game struct {
 	ui *UI
 }
 
@@ -20,4 +20,3 @@ func (game Game) Run() {
 func (game Game) Close() {
 	game.ui.Close()
 }
-

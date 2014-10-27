@@ -1,12 +1,21 @@
 package main
 
 import (
-	"github.com/nsf/termbox-go"
 	"strings"
 	"unicode/utf8"
+	"github.com/nsf/termbox-go"
+	"github.com/imdario/mergo"
 )
 
 type UI struct{}
+
+type BoxStyle struct{
+	horizontal rune
+	vertical rune
+	corner rune
+}
+
+var DefaultBoxStyle = BoxStyle{'-', '|', '+'}
 
 func (ui UI) Close() {
 	termbox.Close()
@@ -18,9 +27,12 @@ func NewUI() (*UI, error) {
 	return ui, err
 }
 
+func (ui UI) PutRune(x, y int, r rune) {
+	termbox.SetCell(x, y, r, termbox.ColorDefault, termbox.ColorDefault)
+}
 func (ui UI) PrintAt(x, y int, s string) {
 	for i, r := range s {
-		termbox.SetCell(x+i, y, r, termbox.ColorDefault, termbox.ColorDefault)
+		ui.PutRune(x + i, y, r)
 	}
 }
 
@@ -43,18 +55,34 @@ func (ui UI) DrawHorizontalLine(x1, y, x2 int, r rune) {
 	}
 }
 
-func (ui UI) DrawRectangle(x1, y1, x2, y2 int, r rune) {
-	ui.DrawHorizontalLine(x1, y1, x2, r)
-	ui.DrawHorizontalLine(x1, y2, x2, r)
-	ui.DrawVerticalLine(x1, y1, y2, r)
-	ui.DrawVerticalLine(x2, y1, y2, r)
+func (ui UI) DrawRectangle(x1, y1, x2, y2 int, style BoxStyle) {
+	if x1 > x2 {
+		x1, x2 = x2, x1
+	}
+	if y1 > y2 {
+		y1, y2 = y2, y1
+	}
+	if err := mergo.Merge(&style, DefaultBoxStyle); err != nil {
+		panic(err)
+	}
+
+	ui.DrawHorizontalLine(x1 + 1, y1, x2 - 1, style.horizontal)
+	ui.DrawHorizontalLine(x1 + 1, y2, x2 - 1, style.horizontal)
+
+	ui.DrawVerticalLine(x1, y1 + 1, y2 - 1, style.vertical)
+	ui.DrawVerticalLine(x2, y1 + 1, y2 - 1, style.vertical)
+
+	ui.PutRune(x1, y1, style.corner)
+	ui.PutRune(x1, y2, style.corner)
+	ui.PutRune(x2, y1, style.corner)
+	ui.PutRune(x2, y2, style.corner)
 }
 
 func (ui UI) Draw() {
 	w, h := termbox.Size()
 
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-	ui.DrawRectangle(0, 0, w - 1, h - 1, '+')
+	ui.DrawRectangle(0, 0, w - 1, h - 1, DefaultBoxStyle)
 	ui.PrintCentered(strings.Repeat("Hello, termbox. ", 4))
 	termbox.Flush()
 }

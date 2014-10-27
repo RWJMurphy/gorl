@@ -14,7 +14,17 @@ func NewGame() (*Game, error) {
 }
 
 func (game Game) Run() {
-	game.ui.MainLoop()
+	game.MainLoop()
+}
+
+func (game Game) MainLoop() {
+	game.ui.Paint()
+mainLoop:
+	for {
+		if stop := game.ui.Tick(); stop{
+			break mainLoop
+		}
+	}
 }
 
 func (game Game) Close() {

@@ -164,29 +164,24 @@ func (ui UI) Paint() {
 	termbox.Flush()
 }
 
-func (ui UI) MainLoop() {
+func (ui UI) Tick() bool {
 	dirty := false
-	ui.Paint()
+	event := termbox.PollEvent()
 
-mainLoop:
-	for {
-		dirty = false
-
-		event := termbox.PollEvent()
-		switch event.Type {
-		case termbox.EventKey:
-			switch event.Key {
-			case termbox.KeyCtrlC, termbox.KeyEsc:
-				break mainLoop
-			}
-		case termbox.EventResize:
-			dirty = true
-		case termbox.EventError:
-			panic(event.Err)
+	switch event.Type {
+	case termbox.EventKey:
+		switch event.Key {
+		case termbox.KeyCtrlC, termbox.KeyEsc:
+			return true
 		}
-
-		if dirty {
-			ui.Paint()
-		}
+	case termbox.EventResize:
+		dirty = true
+	case termbox.EventError:
+		panic(event.Err)
 	}
+
+	if dirty {
+		ui.Paint()
+	}
+	return false
 }

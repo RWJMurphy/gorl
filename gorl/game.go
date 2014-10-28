@@ -32,7 +32,6 @@ func (game *Game) MainLoop() {
 mainLoop:
 	for {
 		game.ui.Tick()
-		panic(game.ui.State)
 		if game.ui.State == StateClosed {
 			break mainLoop
 		}

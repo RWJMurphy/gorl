@@ -13,20 +13,22 @@ func NewGame() (*Game, error) {
 	return game, nil
 }
 
-func (game Game) Run() {
+func (game *Game) Run() {
 	game.MainLoop()
 }
 
-func (game Game) MainLoop() {
+func (game *Game) MainLoop() {
 	game.ui.Paint()
 mainLoop:
 	for {
-		if stop := game.ui.Tick(); stop{
+		game.ui.Tick()
+		panic(game.ui.State)
+		if game.ui.State == StateClosed {
 			break mainLoop
 		}
 	}
 }
 
-func (game Game) Close() {
+func (game *Game) Close() {
 	game.ui.Close()
 }

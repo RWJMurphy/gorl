@@ -1,7 +1,14 @@
 package gorl
 
+const (
+	DefaultDungeonWidth = 100
+	DefaultDungeonHeight = 100
+)
+
 type Game struct {
 	ui *UI
+	dungeons []*Dungeon
+	currentDungeon *Dungeon
 }
 
 func NewGame() (*Game, error) {
@@ -9,7 +16,10 @@ func NewGame() (*Game, error) {
 	if err != nil {
 		return nil, err
 	}
-	game := &Game{ui}
+	dungeons := make([]*Dungeon, 10)
+	dungeons[0] = NewDungeon(DefaultDungeonWidth, DefaultDungeonHeight)
+	game := &Game{ui, dungeons, nil}
+	game.SetDungeon(dungeons[0])
 	return game, nil
 }
 
@@ -31,4 +41,9 @@ mainLoop:
 
 func (game *Game) Close() {
 	game.ui.Close()
+}
+
+func (game *Game) SetDungeon(d *Dungeon) {
+	game.currentDungeon = d
+	game.ui.PointCameraAt(d, d.Origin)
 }

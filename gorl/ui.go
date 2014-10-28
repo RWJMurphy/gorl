@@ -64,6 +64,8 @@ func NewUI() (*UI, error) {
 	ui.cameraWidget = &CameraWidget{
 		0, 0,
 		w - w/4, h - h/4,
+		nil,
+		Coord{0, 0},
 		ui,
 	}
 	ui.menuWidget = &MenuWidget{
@@ -83,10 +85,18 @@ func NewUI() (*UI, error) {
 type CameraWidget struct {
 	x, y 	int
 	w, h 	int
+	dungeon *Dungeon
+	center	Coord
 	ui   	*UI
 }
 
 func (w *CameraWidget) Paint() {
+	d_x, d_y := w.center.x-w.w/2, w.center.y-w.h/2
+	for x := 0; x < w.w; x++ {
+		for y := 0; y < w.h; y++ {
+			w.ui.PutRune(x, y, w.dungeon.Tile(x + d_x, y + d_y))
+		}
+	}
 	w.ui.PaintBorder(w.x, w.y, w.x+w.w-1, w.y+w.h-1, DefaultBoxStyle)
 }
 
@@ -177,6 +187,11 @@ func (ui *UI) Paint() {
 		p.Paint()
 	}
 	termbox.Flush()
+}
+
+func (ui *UI) PointCameraAt(d *Dungeon, c Coord) {
+	ui.cameraWidget.dungeon = d
+	ui.cameraWidget.center = c
 }
 
 func (ui *UI) HandleEvent(e termbox.Event) bool {

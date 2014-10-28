@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/RWJMurphy/gorl/gorl"
+	"github.com/RWJMurphy/gorl/lib"
 )
 
 func main() {

@@ -4,6 +4,7 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/nsf/termbox-go"
 	"strings"
+	"fmt"
 	"unicode/utf8"
 )
 
@@ -33,6 +34,7 @@ type UI struct {
 	menuWidget *MenuWidget
 	messageWidget *MessageLogWidget
 	State UiState
+	game *Game
 }
 
 type BoxStyle struct {
@@ -97,6 +99,9 @@ func (w *CameraWidget) Paint() {
 			w.ui.PutRune(x, y, w.dungeon.Tile(x + d_x, y + d_y))
 		}
 	}
+	for _, m := range w.dungeon.mobs {
+		w.ui.PutRune(m.loc.x - d_x, m.loc.y - d_y, m.c)
+	}
 	w.ui.PaintBorder(w.x, w.y, w.x+w.w-1, w.y+w.h-1, DefaultBoxStyle)
 }
 
@@ -125,6 +130,7 @@ func (w *MenuWidget) Paint() {
 func (ui *UI) PutRune(x, y int, r rune) {
 	termbox.SetCell(x, y, r, termbox.ColorDefault, termbox.ColorDefault)
 }
+
 func (ui *UI) PrintAt(x, y int, s string) {
 	for i, r := range s {
 		ui.PutRune(x+i, y, r)
@@ -194,6 +200,23 @@ func (ui *UI) PointCameraAt(d *Dungeon, c Coord) {
 	ui.cameraWidget.center = c
 }
 
+func (ui *UI) HandleMovementKey(key termbox.Key) {
+	var movement Movement
+	switch key {
+	case termbox.KeyArrowUp:
+		movement = Movement{0, -1}
+	case termbox.KeyArrowRight:
+		movement = Movement{1, 0}
+	case termbox.KeyArrowDown:
+		movement = Movement{0, 1}
+	case termbox.KeyArrowLeft:
+		movement = Movement{-1, 0}
+	default:
+		panic(fmt.Sprintf("Not a supported movement key: %s", key))
+	}
+	ui.game.Move(movement)
+}
+
 func (ui *UI) HandleEvent(e termbox.Event) bool {
 	dirty := false
 	switch e.Type {
@@ -207,6 +230,9 @@ func (ui *UI) HandleEvent(e termbox.Event) bool {
 			switch e.Key {
 			case termbox.KeyCtrlC, termbox.KeyEsc:
 				ui.State = StateClosed
+			case termbox.KeyArrowUp, termbox.KeyArrowRight, termbox.KeyArrowDown, termbox.KeyArrowLeft:
+				ui.HandleMovementKey(e.Key)
+				dirty = true
 			}
 		}
 	case termbox.EventResize:

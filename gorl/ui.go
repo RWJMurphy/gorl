@@ -198,9 +198,16 @@ func (ui *UI) HandleEvent(e termbox.Event) bool {
 	dirty := false
 	switch e.Type {
 	case termbox.EventKey:
-		switch e.Key {
-		case termbox.KeyCtrlC, termbox.KeyEsc:
-			ui.State = StateClosed
+		if e.Ch != 0 {
+			switch e.Ch {
+			case 'q':
+				ui.State = StateClosed
+			}
+		} else {
+			switch e.Key {
+			case termbox.KeyCtrlC, termbox.KeyEsc:
+				ui.State = StateClosed
+			}
 		}
 	case termbox.EventResize:
 		dirty = true

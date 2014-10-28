@@ -8,24 +8,25 @@ type Dungeon struct {
 	width, height int
 	origin        Coord
 	tiles         []rune
-	mobs	      []*Player
+	mobs          []*Player
 }
+
 const est_mob_ratio = 0.1
 
 func NewDungeon(width, height int) *Dungeon {
-	size := width*height
+	size := width * height
 	m := &Dungeon{
 		width, height,
-		Coord{width/2, height/2},
+		Coord{width / 2, height / 2},
 		make([]rune, size),
-		make([]*Player, 0, int(float32(size) * est_mob_ratio)),
+		make([]*Player, 0, int(float32(size)*est_mob_ratio)),
 	}
 	for i, _ := range m.tiles {
 		m.tiles[i] = '.'
 	}
-	for x := m.origin.x - 10; x < m.origin.x + 10; x++ {
-		for y := m.origin.y - 10; y < m.origin.y + 10; y++ {
-			m.tiles[x + y * m.width] = '#'
+	for x := m.origin.x - 10; x < m.origin.x+10; x++ {
+		for y := m.origin.y - 10; y < m.origin.y+10; y++ {
+			m.tiles[x+y*m.width] = '#'
 		}
 	}
 	return m

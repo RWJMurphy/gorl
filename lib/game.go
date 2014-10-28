@@ -1,14 +1,14 @@
 package gorl
 
 const (
-	DefaultDungeonWidth = 100
+	DefaultDungeonWidth  = 100
 	DefaultDungeonHeight = 100
 )
 
 type Game struct {
-	ui *UI
-	player *Player
-	dungeons []*Dungeon
+	ui             *UI
+	player         *Player
+	dungeons       []*Dungeon
 	currentDungeon *Dungeon
 }
 
@@ -34,11 +34,11 @@ func NewGame() (*Game, error) {
 	return game, nil
 }
 
-type Movement struct{
+type Movement struct {
 	x, y int
 }
 
-func (game *Game) Move(movement Movement){
+func (game *Game) Move(movement Movement) {
 	game.player.Move(movement)
 	game.ui.PointCameraAt(game.currentDungeon, game.player.loc)
 }

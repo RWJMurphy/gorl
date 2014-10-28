@@ -1,10 +1,10 @@
 package gorl
 
 import (
+	"fmt"
 	"github.com/imdario/mergo"
 	"github.com/nsf/termbox-go"
 	"strings"
-	"fmt"
 	"unicode/utf8"
 )
 
@@ -13,10 +13,12 @@ type Paintable interface {
 }
 
 type UiState int
+
 const (
 	StateGame UiState = iota
 	StateClosed
 )
+
 func (state UiState) String() string {
 	switch state {
 	case StateGame:
@@ -29,12 +31,12 @@ func (state UiState) String() string {
 }
 
 type UI struct {
-	Paintables []Paintable
-	cameraWidget *CameraWidget
-	menuWidget *MenuWidget
+	Paintables    []Paintable
+	cameraWidget  *CameraWidget
+	menuWidget    *MenuWidget
 	messageWidget *MessageLogWidget
-	State UiState
-	game *Game
+	State         UiState
+	game          *Game
 }
 
 type BoxStyle struct {
@@ -85,22 +87,22 @@ func NewUI() (*UI, error) {
 }
 
 type CameraWidget struct {
-	x, y 	int
-	w, h 	int
+	x, y    int
+	w, h    int
 	dungeon *Dungeon
-	center	Coord
-	ui   	*UI
+	center  Coord
+	ui      *UI
 }
 
 func (w *CameraWidget) Paint() {
 	d_x, d_y := w.center.x-w.w/2, w.center.y-w.h/2
 	for x := 0; x < w.w; x++ {
 		for y := 0; y < w.h; y++ {
-			w.ui.PutRune(x, y, w.dungeon.Tile(x + d_x, y + d_y))
+			w.ui.PutRune(x, y, w.dungeon.Tile(x+d_x, y+d_y))
 		}
 	}
 	for _, m := range w.dungeon.mobs {
-		w.ui.PutRune(m.loc.x - d_x, m.loc.y - d_y, m.c)
+		w.ui.PutRune(m.loc.x-d_x, m.loc.y-d_y, m.c)
 	}
 	w.ui.PaintBorder(w.x, w.y, w.x+w.w-1, w.y+w.h-1, DefaultBoxStyle)
 }

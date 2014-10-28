@@ -1,8 +1,8 @@
 package gorl
 
-type Player struct{
+type Player struct {
 	loc Coord
-	c rune
+	c   rune
 }
 
 func NewPlayer() *Player {

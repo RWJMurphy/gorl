@@ -7,7 +7,7 @@ type Coord struct {
 type Dungeon struct {
 	width, height int
 	origin        Coord
-	tiles         []rune
+	tiles         [][]rune
 	mobs          []*Player
 }
 
@@ -15,18 +15,28 @@ const est_mob_ratio = 0.1
 
 func NewDungeon(width, height int) *Dungeon {
 	size := width * height
+	tiles := make([][]rune, height)
+	tiles_raw := make([]rune, size)
+	for i := range tiles {
+		tiles[i], tiles_raw = tiles_raw[:width], tiles_raw[width:]
+	}
+
 	m := &Dungeon{
 		width, height,
 		Coord{width / 2, height / 2},
-		make([]rune, size),
+		tiles,
 		make([]*Player, 0, int(float32(size)*est_mob_ratio)),
 	}
-	for i, _ := range m.tiles {
-		m.tiles[i] = '.'
+
+	for x := 0; x < width; x++ {
+		for y := 0; y < width; y++ {
+			m.tiles[y][x] = '.'
+		}
 	}
+
 	for x := m.origin.x - 10; x < m.origin.x+10; x++ {
 		for y := m.origin.y - 10; y < m.origin.y+10; y++ {
-			m.tiles[x+y*m.width] = '#'
+			m.tiles[y][x] = '#'
 		}
 	}
 	return m
@@ -37,5 +47,8 @@ func (d *Dungeon) AddMob(m *Player) {
 }
 
 func (d *Dungeon) Tile(x, y int) rune {
-	return d.tiles[y*d.width+x]
+	if x < 0 || x >= d.width || y < 0 || y >= d.height {
+		return ' '
+	}
+	return d.tiles[y][x]
 }

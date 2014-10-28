@@ -57,24 +57,24 @@ func NewUI() (*UI, error) {
 		return nil, err
 	}
 
-	w, h := termbox.Size()
+	width, height := termbox.Size()
 	ui := new(UI)
 	ui.messageWidget = &MessageLogWidget{
-		0, h - h/4,
-		w, h / 4,
+		0, height - height/4,
+		width, height / 4,
 		strings.Repeat("Hello, termbox. ", 4),
 		ui,
 	}
 	ui.cameraWidget = &CameraWidget{
 		0, 0,
-		w - w/4, h - h/4,
+		width - width/4, height - height/4,
 		nil,
 		Coord{0, 0},
 		ui,
 	}
 	ui.menuWidget = &MenuWidget{
-		w - w/4, 0,
-		w / 4, h - h/4,
+		width - width/4, 0,
+		width / 4, height - height/4,
 		ui,
 	}
 	ui.Paintables = []Paintable{
@@ -87,46 +87,49 @@ func NewUI() (*UI, error) {
 }
 
 type CameraWidget struct {
-	x, y    int
-	w, h    int
-	dungeon *Dungeon
-	center  Coord
-	ui      *UI
+	x, y          int
+	width, height int
+	dungeon       *Dungeon
+	center        Coord
+	ui            *UI
 }
 
-func (w *CameraWidget) Paint() {
-	d_x, d_y := w.center.x-w.w/2, w.center.y-w.h/2
-	for x := 0; x < w.w; x++ {
-		for y := 0; y < w.h; y++ {
-			w.ui.PutRune(x, y, w.dungeon.Tile(x+d_x, y+d_y))
+func (camera *CameraWidget) Paint() {
+	ne := Coord{camera.center.x - camera.width/2, camera.center.y - camera.height/2}
+	for x := 0; x < camera.width; x++ {
+		for y := 0; y < camera.height; y++ {
+			tile_x, tile_y := ne.x+x, ne.y+y
+			out_x, out_y := camera.x+x, camera.y+y
+			tile := camera.dungeon.Tile(tile_x, tile_y)
+			camera.ui.PutRune(out_x, out_y, tile)
 		}
 	}
-	for _, m := range w.dungeon.mobs {
-		w.ui.PutRune(m.loc.x-d_x, m.loc.y-d_y, m.c)
+	for _, m := range camera.dungeon.mobs {
+		camera.ui.PutRune(m.loc.x-ne.x, m.loc.y-ne.y, m.c)
 	}
-	w.ui.PaintBorder(w.x, w.y, w.x+w.w-1, w.y+w.h-1, DefaultBoxStyle)
+	camera.ui.PaintBorder(camera.x, camera.y, camera.x+camera.width-1, camera.y+camera.height-1, DefaultBoxStyle)
 }
 
 type MessageLogWidget struct {
-	x, y int
-	w, h int
-	s    string
-	ui   *UI
+	x, y          int
+	width, height int
+	s             string
+	ui            *UI
 }
 
-func (w *MessageLogWidget) Paint() {
-	w.ui.PrintAt(w.x+1, w.y+1, w.s)
-	w.ui.PaintBorder(w.x, w.y, w.x+w.w-1, w.y+w.h-1, DefaultBoxStyle)
+func (messageLog *MessageLogWidget) Paint() {
+	messageLog.ui.PrintAt(messageLog.x+1, messageLog.y+1, messageLog.s)
+	messageLog.ui.PaintBorder(messageLog.x, messageLog.y, messageLog.x+messageLog.width-1, messageLog.y+messageLog.height-1, DefaultBoxStyle)
 }
 
 type MenuWidget struct {
-	x, y int
-	w, h int
-	ui   *UI
+	x, y          int
+	width, height int
+	ui            *UI
 }
 
-func (w *MenuWidget) Paint() {
-	w.ui.PaintBorder(w.x, w.y, w.x+w.w-1, w.y+w.h-1, DefaultBoxStyle)
+func (menu *MenuWidget) Paint() {
+	menu.ui.PaintBorder(menu.x, menu.y, menu.x+menu.width-1, menu.y+menu.height-1, DefaultBoxStyle)
 }
 
 func (ui *UI) PutRune(x, y int, r rune) {

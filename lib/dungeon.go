@@ -1,5 +1,9 @@
 package gorl
 
+import (
+	"math/rand"
+)
+
 type Coord struct {
 	x, y int
 }
@@ -30,15 +34,14 @@ func NewDungeon(width, height int) *Dungeon {
 
 	for x := 0; x < width; x++ {
 		for y := 0; y < width; y++ {
-			m.tiles[y][x] = '.'
+			if rand.Float64() <= 0.1 {
+			    m.tiles[y][x] = '#'
+			} else {
+			    m.tiles[y][x] = '.'
+			}
 		}
 	}
 
-	for x := m.origin.x - 10; x < m.origin.x+10; x++ {
-		for y := m.origin.y - 10; y < m.origin.y+10; y++ {
-			m.tiles[y][x] = '#'
-		}
-	}
 	return m
 }
 

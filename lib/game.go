@@ -1,8 +1,8 @@
 package gorl
 
 const (
-	DefaultDungeonWidth  = 100
-	DefaultDungeonHeight = 100
+	DefaultDungeonWidth  = 256
+	DefaultDungeonHeight = 256
 )
 
 type Game struct {

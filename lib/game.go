@@ -18,8 +18,8 @@ func NewGame() (*Game, error) {
 	game.messages = make([]string, 0, 10)
 
 	dungeon := NewDungeon(DefaultDungeonWidth, DefaultDungeonHeight)
-	game.dungeons = make([]*Dungeon, 10)
-	game.dungeons[0] = dungeon
+	game.dungeons = make([]*Dungeon, 0, 10)
+	game.dungeons = append(game.dungeons, dungeon)
 
 	game.player = NewPlayer()
 	game.player.loc = dungeon.origin

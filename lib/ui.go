@@ -37,6 +37,7 @@ type UI struct {
 	messages      []string
 	State         UiState
 	game          *Game
+	dirty         bool
 }
 
 type BoxStyle struct {
@@ -84,6 +85,7 @@ func NewUI() (*UI, error) {
 		ui.menuWidget,
 	}
 	ui.State = StateGame
+	ui.dirty = true
 	return ui, nil
 }
 
@@ -203,11 +205,15 @@ func (ui *UI) PaintBorder(x1, y1, x2, y2 int, style BoxStyle) {
 }
 
 func (ui *UI) Paint() {
+	if ! ui.dirty {
+		return
+	}
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 	for _, p := range ui.Paintables {
 		p.Paint()
 	}
 	termbox.Flush()
+	ui.dirty = false
 }
 
 func (ui *UI) PointCameraAt(d *Dungeon, c Coord) {
@@ -215,53 +221,69 @@ func (ui *UI) PointCameraAt(d *Dungeon, c Coord) {
 	ui.cameraWidget.center = c
 }
 
-func (ui *UI) HandleMovementKey(key termbox.Key) {
-	var movement Movement
-	switch key {
-	case termbox.KeyArrowUp:
-		movement = Movement{0, -1}
-	case termbox.KeyArrowRight:
-		movement = Movement{1, 0}
-	case termbox.KeyArrowDown:
-		movement = Movement{0, 1}
-	case termbox.KeyArrowLeft:
-		movement = Movement{-1, 0}
+func (ui *UI) HandleKey(char rune, key termbox.Key) {
+	switch char {
+	case 'q':
+		ui.State = StateClosed
+	case 'h', 'j', 'k', 'l':
+		ui.HandleMovementKey(char, key)
+	case 0:
+		switch key {
+		case termbox.KeyCtrlC, termbox.KeyEsc:
+			ui.State = StateClosed
+		case termbox.KeyArrowUp, termbox.KeyArrowRight, termbox.KeyArrowDown, termbox.KeyArrowLeft:
+			ui.HandleMovementKey(char, key)
+		default:
+			ui.game.AddMessage(fmt.Sprintf("Unhandled key: %s", key))
+		}
 	default:
-		panic(fmt.Sprintf("Not a supported movement key: %s", key))
+		ui.game.AddMessage(fmt.Sprintf("Unhandled key: %c", char))
+	}
+}
+
+func (ui *UI) HandleMovementKey(char rune, key termbox.Key) {
+	var movement Movement
+	switch char {
+	case 'h':
+			movement = Movement{-1, 0}
+	case 'j':
+			movement = Movement{0, 1}
+	case 'k':
+			movement = Movement{0, -1}
+	case 'l':
+			movement = Movement{1, 0}
+	case 0:
+		switch key {
+		case termbox.KeyArrowUp:
+			movement = Movement{0, -1}
+		case termbox.KeyArrowRight:
+			movement = Movement{1, 0}
+		case termbox.KeyArrowDown:
+			movement = Movement{0, 1}
+		case termbox.KeyArrowLeft:
+			movement = Movement{-1, 0}
+		default:
+			panic(fmt.Sprintf("Not a movement key: %s", key))
+		}
+	default:
+		panic(fmt.Sprintf("Not a movement key: %s", char))
 	}
 	ui.game.Move(movement)
 }
 
-func (ui *UI) HandleEvent(e termbox.Event) bool {
-	dirty := false
+func (ui *UI) HandleEvent(e termbox.Event) {
 	switch e.Type {
 	case termbox.EventKey:
-		if e.Ch != 0 {
-			switch e.Ch {
-			case 'q':
-				ui.State = StateClosed
-			}
-		} else {
-			switch e.Key {
-			case termbox.KeyCtrlC, termbox.KeyEsc:
-				ui.State = StateClosed
-			case termbox.KeyArrowUp, termbox.KeyArrowRight, termbox.KeyArrowDown, termbox.KeyArrowLeft:
-				ui.HandleMovementKey(e.Key)
-				dirty = true
-			}
-		}
+		ui.HandleKey(e.Ch, e.Key)
 	case termbox.EventResize:
-		dirty = true
+		ui.dirty = true
 	case termbox.EventError:
 		panic(e.Err)
 	}
-	return dirty
 }
 
 func (ui *UI) Tick() {
 	event := termbox.PollEvent()
-	dirty := ui.HandleEvent(event)
-	if dirty {
-		ui.Paint()
-	}
+	ui.HandleEvent(event)
+	ui.Paint()
 }

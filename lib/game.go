@@ -67,6 +67,7 @@ func (game *Game) Move(movement Movement) {
 		game.player.Move(movement)
 		game.currentDungeon.CalculateLighting()
 		game.ui.PointCameraAt(game.currentDungeon, game.player.loc)
+		game.ui.dirty = true
 	}
 }
 
@@ -77,6 +78,7 @@ func (game *Game) AddMessage(message string) {
 		message_count = len(game.messages)
 	}
 	game.ui.messages = game.messages[len(game.messages)-message_count:]
+	game.ui.dirty = true
 }
 
 func (game *Game) Run() {

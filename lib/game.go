@@ -38,9 +38,19 @@ type Movement struct {
 	x, y int
 }
 
+func (c Coord) Plus(m Movement) Coord {
+	c.x += m.x
+	c.y += m.y
+	return c
+}
+
 func (game *Game) Move(movement Movement) {
-	game.player.Move(movement)
-	game.ui.PointCameraAt(game.currentDungeon, game.player.loc)
+	dest := game.player.loc.Plus(movement)
+	dest_tile := game.currentDungeon.Tile(dest.x, dest.y)
+	if dest_tile.flags & FlagCrossable != 0 {
+		game.player.Move(movement)
+		game.ui.PointCameraAt(game.currentDungeon, game.player.loc)
+	}
 }
 
 func (game *Game) Run() {

@@ -8,16 +8,17 @@ type Coord struct {
 	x, y int
 }
 
-type BitSet int64
-
-const (
-	FlagCrossable = iota << 1
-)
+type BitSet int
 
 type Tile struct {
 	c rune
 	flags BitSet
 }
+
+const (
+	FlagCrossable BitSet = 1 << iota
+)
+
 
 func NewTile(c rune, flags BitSet) Tile {
 	t := Tile{c, flags}
@@ -56,7 +57,7 @@ func NewDungeon(width, height int) *Dungeon {
 			if rand.Float64() <= 0.1 {
 				tile = NewTile('#', BitSet(0))
 			} else {
-				tile = NewTile('.', BitSet(0 & FlagCrossable))
+				tile = NewTile('.', BitSet(0)|FlagCrossable)
 			}
 			m.tiles[y][x] = tile
 		}

@@ -7,6 +7,7 @@ const (
 
 type Game struct {
 	ui             *UI
+	messages       []string
 	player         *Player
 	dungeons       []*Dungeon
 	currentDungeon *Dungeon
@@ -14,6 +15,7 @@ type Game struct {
 
 func NewGame() (*Game, error) {
 	game := new(Game)
+	game.messages = make([]string, 0, 10)
 
 	dungeon := NewDungeon(DefaultDungeonWidth, DefaultDungeonHeight)
 	game.dungeons = make([]*Dungeon, 10)
@@ -38,6 +40,7 @@ func NewGame() (*Game, error) {
 	ui.game = game
 	game.SetDungeon(dungeon)
 
+	game.AddMessage("Welcome to GoRL!")
 	return game, nil
 }
 
@@ -59,6 +62,15 @@ func (game *Game) Move(movement Movement) {
 		game.currentDungeon.CalculateLighting()
 		game.ui.PointCameraAt(game.currentDungeon, game.player.loc)
 	}
+}
+
+func (game *Game) AddMessage(message string) {
+	game.messages = append(game.messages, message)
+	message_count := game.ui.messageWidget.height - 2
+	if message_count > len(game.messages) {
+		message_count = len(game.messages)
+	}
+	game.ui.messages = game.messages[len(game.messages)-message_count:]
 }
 
 func (game *Game) Run() {

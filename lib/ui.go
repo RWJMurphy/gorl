@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/imdario/mergo"
 	"github.com/nsf/termbox-go"
-	"strings"
 	"unicode/utf8"
 )
 
@@ -35,6 +34,7 @@ type UI struct {
 	cameraWidget  *CameraWidget
 	menuWidget    *MenuWidget
 	messageWidget *MessageLogWidget
+	messages      []string
 	State         UiState
 	game          *Game
 }
@@ -59,10 +59,11 @@ func NewUI() (*UI, error) {
 
 	width, height := termbox.Size()
 	ui := new(UI)
+	ui.messages = make([]string, 0, 10)
 	ui.messageWidget = &MessageLogWidget{
 		0, height - height/4,
 		width, height / 4,
-		strings.Repeat("Hello, termbox. ", 4),
+		nil,
 		ui,
 	}
 	ui.cameraWidget = &CameraWidget{
@@ -117,12 +118,14 @@ func (camera *CameraWidget) Paint() {
 type MessageLogWidget struct {
 	x, y          int
 	width, height int
-	s             string
+	messages      []string
 	ui            *UI
 }
 
 func (messageLog *MessageLogWidget) Paint() {
-	messageLog.ui.PrintAt(messageLog.x+1, messageLog.y+1, messageLog.s)
+	for i, m := range messageLog.ui.messages {
+		messageLog.ui.PrintAt(messageLog.x+1, messageLog.y+1+i, m)
+	}
 	messageLog.ui.PaintBorder(messageLog.x, messageLog.y, messageLog.x+messageLog.width-1, messageLog.y+messageLog.height-1, DefaultBoxStyle)
 }
 

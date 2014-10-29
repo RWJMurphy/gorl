@@ -11,7 +11,7 @@ type Coord struct {
 type BitSet int
 
 type Tile struct {
-	c rune
+	c     rune
 	flags BitSet
 }
 

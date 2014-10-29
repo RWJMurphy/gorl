@@ -63,7 +63,7 @@ func (c Coord) Plus(m Movement) Coord {
 func (game *Game) Move(movement Movement) {
 	dest := game.player.loc.Plus(movement)
 	dest_tile := game.currentDungeon.Tile(dest.x, dest.y)
-	if dest_tile.flags & FlagCrossable != 0 {
+	if dest_tile.flags&FlagCrossable != 0 {
 		game.player.Move(movement)
 		game.currentDungeon.CalculateLighting()
 		game.ui.PointCameraAt(game.currentDungeon, game.player.loc)

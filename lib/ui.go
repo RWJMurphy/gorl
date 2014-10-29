@@ -101,7 +101,7 @@ func (camera *CameraWidget) Paint() {
 			tile_x, tile_y := ne.x+x, ne.y+y
 			out_x, out_y := camera.x+x, camera.y+y
 			tile := camera.dungeon.Tile(tile_x, tile_y)
-			camera.ui.PutRune(out_x, out_y, tile)
+			camera.ui.PutRune(out_x, out_y, tile.c)
 		}
 	}
 	for _, m := range camera.dungeon.mobs {

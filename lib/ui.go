@@ -101,11 +101,15 @@ func (camera *CameraWidget) Paint() {
 			tile_x, tile_y := ne.x+x, ne.y+y
 			out_x, out_y := camera.x+x, camera.y+y
 			tile := camera.dungeon.Tile(tile_x, tile_y)
-			camera.ui.PutRune(out_x, out_y, tile.c)
+			if tile.flags & FlagVisible != 0 {
+				if tile.flags & FlagLit != 0 {
+					camera.ui.PutRune(out_x, out_y, tile.c)
+				}
+			}
 		}
 	}
 	for _, m := range camera.dungeon.mobs {
-		camera.ui.PutRune(m.loc.x-ne.x, m.loc.y-ne.y, m.c)
+		camera.ui.PutRune(m.Loc().x-ne.x, m.Loc().y-ne.y, m.Char())
 	}
 	camera.ui.PaintBorder(camera.x, camera.y, camera.x+camera.width-1, camera.y+camera.height-1, DefaultBoxStyle)
 }

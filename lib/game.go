@@ -23,6 +23,13 @@ func NewGame() (*Game, error) {
 	game.player.loc = dungeon.origin
 	dungeon.AddMob(game.player)
 
+	dummy_mob := NewMob('o')
+	dummy_mob.loc.x = dungeon.origin.x + 5
+	dummy_mob.loc.y = dungeon.origin.y
+	dungeon.AddMob(dummy_mob)
+
+	dungeon.CalculateLighting()
+
 	ui, err := NewUI()
 	if err != nil {
 		return nil, err
@@ -49,6 +56,7 @@ func (game *Game) Move(movement Movement) {
 	dest_tile := game.currentDungeon.Tile(dest.x, dest.y)
 	if dest_tile.flags & FlagCrossable != 0 {
 		game.player.Move(movement)
+		game.currentDungeon.CalculateLighting()
 		game.ui.PointCameraAt(game.currentDungeon, game.player.loc)
 	}
 }

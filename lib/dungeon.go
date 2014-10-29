@@ -17,8 +17,9 @@ type Tile struct {
 
 const (
 	FlagCrossable BitSet = 1 << iota
+	FlagLit
+	FlagVisible
 )
-
 
 func NewTile(c rune, flags BitSet) Tile {
 	t := Tile{c, flags}
@@ -31,7 +32,7 @@ type Dungeon struct {
 	width, height int
 	origin        Coord
 	tiles         [][]Tile
-	mobs          []*Player
+	mobs          []Mob
 }
 
 const est_mob_ratio = 0.1
@@ -48,16 +49,16 @@ func NewDungeon(width, height int) *Dungeon {
 		width, height,
 		Coord{width / 2, height / 2},
 		tiles,
-		make([]*Player, 0, int(float32(size)*est_mob_ratio)),
+		make([]Mob, 0, int(float32(size)*est_mob_ratio)),
 	}
 
 	var tile Tile
 	for x := 0; x < width; x++ {
 		for y := 0; y < width; y++ {
 			if rand.Float64() <= 0.1 {
-				tile = NewTile('#', BitSet(0))
+				tile = NewTile('#', BitSet(0)|FlagVisible)
 			} else {
-				tile = NewTile('.', BitSet(0)|FlagCrossable)
+				tile = NewTile('.', BitSet(0)|FlagCrossable|FlagVisible)
 			}
 			m.tiles[y][x] = tile
 		}
@@ -66,8 +67,23 @@ func NewDungeon(width, height int) *Dungeon {
 	return m
 }
 
-func (d *Dungeon) AddMob(m *Player) {
+func (d *Dungeon) AddMob(m Mob) {
 	d.mobs = append(d.mobs, m)
+}
+
+func (d *Dungeon) CalculateLighting() {
+	for x := 0; x < d.width; x++ {
+		for y := 0; y < d.width; y++ {
+			d.tiles[y][x].flags = d.tiles[y][x].flags & ^FlagLit
+		}
+	}
+	for _, m := range d.mobs {
+		for x := m.Loc().x - 5; x < m.Loc().x + 5; x++ {
+			for y := m.Loc().y - 5; y < m.Loc().y + 5; y++ {
+				d.tiles[y][x].flags = d.tiles[y][x].flags | FlagLit
+			}
+		}
+	}
 }
 
 func (d *Dungeon) Tile(x, y int) Tile {

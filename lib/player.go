@@ -1,17 +1,12 @@
 package gorl
 
 type Player struct {
-	loc Coord
-	c   rune
+	mob
 }
 
 func NewPlayer() *Player {
-	p := &Player{}
-	p.c = '@'
+	p := &Player{
+		*NewMob('@'),
+	}
 	return p
-}
-
-func (p *Player) Move(m Movement) {
-	p.loc.x += m.x
-	p.loc.y += m.y
 }

@@ -78,9 +78,11 @@ func (d *Dungeon) CalculateLighting() {
 		}
 	}
 	for _, m := range d.mobs {
-		for x := m.Loc().x - 5; x < m.Loc().x + 5; x++ {
-			for y := m.Loc().y - 5; y < m.Loc().y + 5; y++ {
-				d.tiles[y][x].flags = d.tiles[y][x].flags | FlagLit
+		for x := m.Loc().x - 5; x < m.Loc().x+5; x++ {
+			for y := m.Loc().y - 5; y < m.Loc().y+5; y++ {
+				if x >= 0 && x < d.width && y >= 0 && y < d.height {
+					d.tiles[y][x].flags = d.tiles[y][x].flags | FlagLit
+				}
 			}
 		}
 	}

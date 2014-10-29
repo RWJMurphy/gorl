@@ -110,7 +110,10 @@ func (camera *CameraWidget) Paint() {
 		}
 	}
 	for _, m := range camera.dungeon.mobs {
-		camera.ui.PutRune(m.Loc().x-ne.x, m.Loc().y-ne.y, m.Char())
+		out_x, out_y := m.Loc().x-ne.x, m.Loc().y-ne.y
+		if out_x > 0 && out_x < camera.width && out_y > 0 && out_y < camera.height {
+			camera.ui.PutRune(m.Loc().x-ne.x, m.Loc().y-ne.y, m.Char())
+		}
 	}
 	camera.ui.PaintBorder(camera.x, camera.y, camera.x+camera.width-1, camera.y+camera.height-1, DefaultBoxStyle)
 }

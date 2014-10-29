@@ -1,5 +1,9 @@
 package gorl
 
+import (
+	"math/rand"
+)
+
 const (
 	DefaultDungeonWidth  = 256
 	DefaultDungeonHeight = 256
@@ -25,10 +29,12 @@ func NewGame() (*Game, error) {
 	game.player.loc = dungeon.origin
 	dungeon.AddMob(game.player)
 
-	dummy_mob := NewMob('o')
-	dummy_mob.loc.x = dungeon.origin.x + 5
-	dummy_mob.loc.y = dungeon.origin.y
-	dungeon.AddMob(dummy_mob)
+	for i := 0; i < 20; i++ {
+		mob := NewMob('o')
+		mob.loc.x = rand.Int() % dungeon.width
+		mob.loc.y = rand.Int() % dungeon.height
+		dungeon.AddMob(mob)
+	}
 
 	dungeon.CalculateLighting()
 

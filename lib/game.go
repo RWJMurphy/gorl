@@ -29,10 +29,14 @@ func NewGame() (*Game, error) {
 	game.player.loc = dungeon.origin
 	dungeon.AddMob(game.player)
 
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 100; i++ {
+		x, y := rand.Int() % dungeon.width, rand.Int() % dungeon.height
+		for dungeon.Tile(x, y).flags&FlagCrossable == 0 {
+			x, y = rand.Int() % dungeon.width, rand.Int() % dungeon.height
+		}
 		mob := NewMob('o')
-		mob.loc.x = rand.Int() % dungeon.width
-		mob.loc.y = rand.Int() % dungeon.height
+		mob.loc.x = x
+		mob.loc.y = y
 		dungeon.AddMob(mob)
 	}
 
@@ -62,13 +66,18 @@ func (c Coord) Plus(m Movement) Coord {
 
 func (game *Game) Move(movement Movement) {
 	dest := game.player.loc.Plus(movement)
-	dest_tile := game.currentDungeon.Tile(dest.x, dest.y)
-	if dest_tile.flags&FlagCrossable != 0 {
-		game.player.Move(movement)
-		game.currentDungeon.CalculateLighting()
-		game.ui.PointCameraAt(game.currentDungeon, game.player.loc)
-		game.ui.dirty = true
+	other_mob, blocked := game.currentDungeon.mobs[dest]
+	if blocked && other_mob.Flags()&FlagCrossable == 0 {
+		return
 	}
+	dest_tile := game.currentDungeon.Tile(dest.x, dest.y)
+	if dest_tile.flags&FlagCrossable == 0 {
+		return
+	}
+	game.currentDungeon.MoveMob(game.player, movement)
+	game.currentDungeon.CalculateLighting()
+	game.ui.PointCameraAt(game.currentDungeon, game.player.loc)
+	game.ui.dirty = true
 }
 
 func (game *Game) AddMessage(message string) {

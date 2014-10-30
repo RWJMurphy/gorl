@@ -59,7 +59,7 @@ func NewUI() (*UI, error) {
 	}
 
 	width, height := termbox.Size()
-	ui := new(UI)
+	ui := &UI{}
 	ui.messages = make([]string, 0, 10)
 	ui.messageWidget = &MessageLogWidget{
 		0, height - height/4,
@@ -103,7 +103,7 @@ func (camera *CameraWidget) Paint() {
 		loc  Coord
 		out  Coord
 		x, y int
-		m    Mob
+		f    Feature
 		ok   bool
 	)
 	ne := Coord{camera.center.x - camera.width/2, camera.center.y - camera.height/2}
@@ -114,9 +114,12 @@ func (camera *CameraWidget) Paint() {
 			out = Coord{camera.x + x, camera.y + y}
 			tile = camera.dungeon.Tile(loc.x, loc.y)
 			if tile.Visible() && tile.Lit() {
-				camera.ui.PutRune(out.x, out.y, tile.c)
-				if m, ok = camera.dungeon.mobs[loc]; ok {
-					camera.ui.PutRune(out.x, out.y, m.Char())
+				camera.ui.PutRuneColor(out.x, out.y, tile.c, tile.color, termbox.ColorDefault)
+				if f, ok = camera.dungeon.features[loc]; ok {
+					camera.ui.PutRuneColor(out.x, out.y, f.Char(), f.Color(), termbox.ColorDefault)
+				}
+				if f, ok = camera.dungeon.mobs[loc]; ok {
+					camera.ui.PutRuneColor(out.x, out.y, f.Char(), f.Color(), termbox.ColorDefault)
 				}
 			}
 		}
@@ -148,8 +151,12 @@ func (menu *MenuWidget) Paint() {
 	menu.ui.PaintBorder(menu.x, menu.y, menu.x+menu.width-1, menu.y+menu.height-1, DefaultBoxStyle)
 }
 
+func (ui *UI) PutRuneColor(x, y int, r rune, fg, bg termbox.Attribute) {
+	termbox.SetCell(x, y, r, fg, bg)
+}
+
 func (ui *UI) PutRune(x, y int, r rune) {
-	termbox.SetCell(x, y, r, termbox.ColorDefault, termbox.ColorDefault)
+	ui.PutRuneColor(x, y, r, termbox.ColorDefault, termbox.ColorDefault)
 }
 
 func (ui *UI) PrintAt(x, y int, s string) {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"github.com/nsf/termbox-go"
 )
 
 type Coord struct {
@@ -16,6 +17,7 @@ func (c Coord) String() string {
 
 type Tile struct {
 	c     rune
+	color termbox.Attribute
 	flags Flag
 }
 
@@ -55,18 +57,19 @@ func (f Flag) String() string {
 	return fmt.Sprintf("<Flag %s>", strings.Join(on_flags, "|"))
 }
 
-func NewTile(c rune, flags Flag) Tile {
-	t := Tile{c, flags}
+func NewTile(c rune, color termbox.Attribute, flags Flag) Tile {
+	t := Tile{c, color, flags}
 	return t
 }
 
-var InvalidTile = Tile{' ', Flag(0) | FlagBlocksLight}
+var InvalidTile = Tile{' ', termbox.ColorBlack, Flag(0) | FlagBlocksLight}
 
 type Dungeon struct {
 	width, height int
 	origin        Coord
 	tiles         [][]Tile
 	mobs          map[Coord]Mob
+	features      map[Coord]Feature
 }
 
 func NewDungeon(width, height int) *Dungeon {
@@ -82,21 +85,34 @@ func NewDungeon(width, height int) *Dungeon {
 		Coord{width / 2, height / 2},
 		tiles,
 		make(map[Coord]Mob),
+		make(map[Coord]Feature),
 	}
 
 	var tile Tile
+	wallChance := 0.1
 	for x := 0; x < width; x++ {
 		for y := 0; y < width; y++ {
-			if rand.Float64() <= 0.1 {
-				tile = NewTile('#', Flag(0)|FlagBlocksLight)
+			if rand.Float64() <= wallChance {
+				tile = NewTile('#', termbox.ColorYellow, Flag(0)|FlagBlocksLight)
 			} else {
-				tile = NewTile('.', Flag(0)|FlagCrossable)
+				tile = NewTile('.', termbox.ColorWhite, Flag(0)|FlagCrossable)
 			}
 			m.tiles[y][x] = tile
 		}
 	}
 
 	return m
+}
+
+func (d *Dungeon) AddFeature(feature Feature) {
+	if other_feature, exists := d.features[feature.Loc()]; exists {
+		panic(fmt.Sprintf(
+			"Tried to put two features on same location: %s, %s",
+			feature,
+			other_feature,
+		))
+	}
+	d.features[feature.Loc()] = feature
 }
 
 func (d *Dungeon) AddMob(mob Mob) {
@@ -127,6 +143,9 @@ func (d *Dungeon) MoveMob(mob Mob, move Movement) {
 func (d *Dungeon) CalculateLighting() {
 	for loc, mob := range d.mobs {
 		d.FlagByLineOfSight(loc, mob.LightRadius(), FlagLit)
+	}
+	for loc, feature := range d.features {
+		d.FlagByLineOfSight(loc, feature.LightRadius(), FlagLit)
 	}
 }
 

@@ -6,12 +6,12 @@ type Player struct {
 
 const (
 	PlayerVisionRadius = 100
-	PlayerLightRadius  = 10
+	PlayerLightRadius  = 2
 )
 
 func NewPlayer() *Player {
 	p := &Player{
-		*NewMob('@'),
+		*NewMob("Player", '@'),
 	}
 	p.visionRadius = PlayerVisionRadius
 	p.lightRadius = PlayerLightRadius

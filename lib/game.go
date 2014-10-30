@@ -1,6 +1,7 @@
 package gorl
 
 import (
+	"github.com/nsf/termbox-go"
 	"math/rand"
 )
 
@@ -18,7 +19,7 @@ type Game struct {
 }
 
 func NewGame() (*Game, error) {
-	game := new(Game)
+	game := &Game{}
 	game.messages = make([]string, 0, 10)
 
 	dungeon := NewDungeon(DefaultDungeonWidth, DefaultDungeonHeight)
@@ -34,11 +35,22 @@ func NewGame() (*Game, error) {
 		for !dungeon.Tile(x, y).Crossable() {
 			x, y = rand.Int()%dungeon.width, rand.Int()%dungeon.height
 		}
-		mob := NewMob('o')
-		mob.loc.x = x
-		mob.loc.y = y
-		mob.lightRadius = 10
+		mob := NewMob("orc", 'o')
+		mob.color = termbox.ColorGreen
+		mob.loc = Coord{x, y}
 		dungeon.AddMob(mob)
+	}
+
+	for i := 0; i < 100; i ++ {
+		x, y := rand.Int()%dungeon.width, rand.Int()%dungeon.height
+		for !dungeon.Tile(x, y).Crossable() {
+			x, y = rand.Int()%dungeon.width, rand.Int()%dungeon.height
+		}
+		feature := NewFeature("torch", '!')
+		feature.loc = Coord{x, y}
+		feature.color = termbox.ColorRed | termbox.AttrBold
+		feature.lightRadius = 20
+		dungeon.AddFeature(feature)
 	}
 
 	dungeon.ResetFlag(FlagLit | FlagVisible)

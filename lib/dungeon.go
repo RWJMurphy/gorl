@@ -206,13 +206,14 @@ func (d *Dungeon) castFlag(
 			} else if end_slope > l_slope {
 				break
 			} else {
+				t := d.Tile(mx, my)
 				// our light beam is touching this square; flag it:
 				if dx*dx+dy*dy < radius_2 {
-					d.tiles[my][mx].flags |= flag
+					t.flags |= flag
 				}
 				if blocked {
 					// we're scanning a row of blocked squares
-					if d.BlocksLight(mx, my) {
+					if t.BlocksLight() {
 						new_start_slope = r_slope
 						continue
 					} else {
@@ -220,7 +221,7 @@ func (d *Dungeon) castFlag(
 						start_slope = new_start_slope
 					}
 				} else {
-					if d.BlocksLight(mx, my) && j < radius {
+					if t.BlocksLight() && j < radius {
 						// this is a blocking square, start a child scan:
 						blocked = true
 						d.castFlag(cx, cy, j+1, start_slope, l_slope, radius, xx, xy, yx, yy, flag)
@@ -235,25 +236,26 @@ func (d *Dungeon) castFlag(
 	}
 }
 
-func (d *Dungeon) Crossable(x, y int) bool {
-	return d.tiles[y][x].flags&FlagCrossable != 0
-}
-
-func (d *Dungeon) Lit(x, y int) bool {
-	return d.tiles[y][x].flags&FlagLit != 0
-}
-
-func (d *Dungeon) Visible(x, y int) bool {
-	return d.tiles[y][x].flags&FlagVisible != 0
-}
-
-func (d *Dungeon) BlocksLight(x, y int) bool {
-	return d.tiles[y][x].flags&FlagBlocksLight != 0
-}
-
-func (d *Dungeon) Tile(x, y int) Tile {
+func (d *Dungeon) Tile(x, y int) *Tile {
 	if x < 0 || x >= d.width || y < 0 || y >= d.height {
-		return InvalidTile
+		t := InvalidTile
+		return &t
 	}
-	return d.tiles[y][x]
+	return &d.tiles[y][x]
+}
+
+func (t *Tile) Crossable() bool {
+	return t.flags&FlagCrossable != 0
+}
+
+func (t *Tile) Lit() bool {
+	return t.flags&FlagLit != 0
+}
+
+func (t *Tile) Visible() bool {
+	return t.flags&FlagVisible != 0
+}
+
+func (t *Tile) BlocksLight() bool {
+	return t.flags&FlagBlocksLight != 0
 }

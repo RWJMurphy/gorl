@@ -31,7 +31,7 @@ func NewGame() (*Game, error) {
 
 	for i := 0; i < 100; i++ {
 		x, y := rand.Int()%dungeon.width, rand.Int()%dungeon.height
-		for !dungeon.Crossable(x, y) {
+		for !dungeon.Tile(x, y).Crossable() {
 			x, y = rand.Int()%dungeon.width, rand.Int()%dungeon.height
 		}
 		mob := NewMob('o')
@@ -74,7 +74,7 @@ func (game *Game) Move(movement Movement) {
 	if blocked {
 		return
 	}
-	if !game.currentDungeon.Crossable(dest.x, dest.y) {
+	if !game.currentDungeon.Tile(dest.x, dest.y).Crossable() {
 		return
 	}
 	game.currentDungeon.MoveMob(game.player, movement)

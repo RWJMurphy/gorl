@@ -98,24 +98,26 @@ type CameraWidget struct {
 }
 
 func (camera *CameraWidget) Paint() {
+	var (
+		tile *Tile
+		loc  Coord
+		out  Coord
+		x, y int
+		m    Mob
+		ok   bool
+	)
 	ne := Coord{camera.center.x - camera.width/2, camera.center.y - camera.height/2}
-	for x := 0; x < camera.width; x++ {
-		for y := 0; y < camera.height; y++ {
-			tile_x, tile_y := ne.x+x, ne.y+y
-			out_x, out_y := camera.x+x, camera.y+y
-			tile := camera.dungeon.Tile(tile_x, tile_y)
-			if camera.dungeon.Visible(tile_x, tile_y) {
-				if camera.dungeon.Lit(tile_x, tile_y) {
-					camera.ui.PutRune(out_x, out_y, tile.c)
+
+	for x = 0; x < camera.width; x++ {
+		for y = 0; y < camera.height; y++ {
+			loc = Coord{ne.x + x, ne.y + y}
+			out = Coord{camera.x + x, camera.y + y}
+			tile = camera.dungeon.Tile(loc.x, loc.y)
+			if tile.Visible() && tile.Lit() {
+				camera.ui.PutRune(out.x, out.y, tile.c)
+				if m, ok = camera.dungeon.mobs[loc]; ok {
+					camera.ui.PutRune(out.x, out.y, m.Char())
 				}
-			}
-		}
-	}
-	for loc, m := range camera.dungeon.mobs {
-		out_x, out_y := loc.x-ne.x, loc.y-ne.y
-		if out_x > 0 && out_x < camera.width && out_y > 0 && out_y < camera.height {
-			if camera.dungeon.Visible(loc.x, loc.y) && camera.dungeon.Lit(loc.x, loc.y) {
-				camera.ui.PutRune(loc.x-ne.x, loc.y-ne.y, m.Char())
 			}
 		}
 	}

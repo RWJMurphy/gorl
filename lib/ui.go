@@ -104,8 +104,8 @@ func (camera *CameraWidget) Paint() {
 			tile_x, tile_y := ne.x+x, ne.y+y
 			out_x, out_y := camera.x+x, camera.y+y
 			tile := camera.dungeon.Tile(tile_x, tile_y)
-			if tile.flags&FlagVisible != 0 {
-				if tile.flags&FlagLit != 0 {
+			if camera.dungeon.Visible(tile_x, tile_y) {
+				if camera.dungeon.Lit(tile_x, tile_y) {
 					camera.ui.PutRune(out_x, out_y, tile.c)
 				}
 			}
@@ -114,7 +114,9 @@ func (camera *CameraWidget) Paint() {
 	for loc, m := range camera.dungeon.mobs {
 		out_x, out_y := loc.x-ne.x, loc.y-ne.y
 		if out_x > 0 && out_x < camera.width && out_y > 0 && out_y < camera.height {
-			camera.ui.PutRune(loc.x-ne.x, loc.y-ne.y, m.Char())
+			if camera.dungeon.Visible(loc.x, loc.y) && camera.dungeon.Lit(loc.x, loc.y) {
+				camera.ui.PutRune(loc.x-ne.x, loc.y-ne.y, m.Char())
+			}
 		}
 	}
 	camera.ui.PaintBorder(camera.x, camera.y, camera.x+camera.width-1, camera.y+camera.height-1, DefaultBoxStyle)
@@ -205,7 +207,7 @@ func (ui *UI) PaintBorder(x1, y1, x2, y2 int, style BoxStyle) {
 }
 
 func (ui *UI) Paint() {
-	if ! ui.dirty {
+	if !ui.dirty {
 		return
 	}
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
@@ -245,13 +247,13 @@ func (ui *UI) HandleMovementKey(char rune, key termbox.Key) {
 	var movement Movement
 	switch char {
 	case 'h':
-			movement = Movement{-1, 0}
+		movement = Movement{-1, 0}
 	case 'j':
-			movement = Movement{0, 1}
+		movement = Movement{0, 1}
 	case 'k':
-			movement = Movement{0, -1}
+		movement = Movement{0, -1}
 	case 'l':
-			movement = Movement{1, 0}
+		movement = Movement{1, 0}
 	case 0:
 		switch key {
 		case termbox.KeyArrowUp:

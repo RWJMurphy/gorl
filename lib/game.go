@@ -30,17 +30,20 @@ func NewGame() (*Game, error) {
 	dungeon.AddMob(game.player)
 
 	for i := 0; i < 100; i++ {
-		x, y := rand.Int() % dungeon.width, rand.Int() % dungeon.height
-		for dungeon.Tile(x, y).flags&FlagCrossable == 0 {
-			x, y = rand.Int() % dungeon.width, rand.Int() % dungeon.height
+		x, y := rand.Int()%dungeon.width, rand.Int()%dungeon.height
+		for !dungeon.Crossable(x, y) {
+			x, y = rand.Int()%dungeon.width, rand.Int()%dungeon.height
 		}
 		mob := NewMob('o')
 		mob.loc.x = x
 		mob.loc.y = y
+		mob.lightRadius = 10
 		dungeon.AddMob(mob)
 	}
 
+	dungeon.ResetFlag(FlagLit | FlagVisible)
 	dungeon.CalculateLighting()
+	dungeon.FlagByLineOfSight(game.player.loc, game.player.visionRadius, FlagVisible)
 
 	ui, err := NewUI()
 	if err != nil {
@@ -66,16 +69,20 @@ func (c Coord) Plus(m Movement) Coord {
 
 func (game *Game) Move(movement Movement) {
 	dest := game.player.loc.Plus(movement)
-	other_mob, blocked := game.currentDungeon.mobs[dest]
-	if blocked && other_mob.Flags()&FlagCrossable == 0 {
+	// ASSUMPTION: only one mob per tile
+	_, blocked := game.currentDungeon.mobs[dest]
+	if blocked {
 		return
 	}
-	dest_tile := game.currentDungeon.Tile(dest.x, dest.y)
-	if dest_tile.flags&FlagCrossable == 0 {
+	if !game.currentDungeon.Crossable(dest.x, dest.y) {
 		return
 	}
 	game.currentDungeon.MoveMob(game.player, movement)
+
+	game.currentDungeon.ResetFlag(FlagLit | FlagVisible)
 	game.currentDungeon.CalculateLighting()
+	game.currentDungeon.FlagByLineOfSight(game.player.loc, game.player.visionRadius, FlagVisible)
+
 	game.ui.PointCameraAt(game.currentDungeon, game.player.loc)
 	game.ui.dirty = true
 }

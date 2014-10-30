@@ -229,7 +229,7 @@ func (ui *UI) HandleKey(char rune, key termbox.Key) {
 	switch char {
 	case 'q':
 		ui.State = StateClosed
-	case 'h', 'j', 'k', 'l':
+	case 'h', 'j', 'k', 'l', 'y', 'u', 'b', 'n':
 		ui.HandleMovementKey(char, key)
 	case 0:
 		switch key {
@@ -245,27 +245,46 @@ func (ui *UI) HandleKey(char rune, key termbox.Key) {
 	}
 }
 
+var (
+	MoveNorth     = Movement{0, -1}
+	MoveNorthEast = Movement{1, -1}
+	MoveEast      = Movement{1, 0}
+	MoveSouthEast = Movement{1, 1}
+	MoveSouth     = Movement{0, 1}
+	MoveSouthWest = Movement{-1, 1}
+	MoveWest      = Movement{-1, 0}
+	MoveNorthWest = Movement{-1, -1}
+)
+
 func (ui *UI) HandleMovementKey(char rune, key termbox.Key) {
 	var movement Movement
 	switch char {
-	case 'h':
-		movement = Movement{-1, 0}
-	case 'j':
-		movement = Movement{0, 1}
 	case 'k':
-		movement = Movement{0, -1}
+		movement = MoveNorth
+	case 'u':
+		movement = MoveNorthEast
 	case 'l':
-		movement = Movement{1, 0}
+		movement = MoveEast
+	case 'n':
+		movement = MoveSouthEast
+	case 'j':
+		movement = MoveSouth
+	case 'b':
+		movement = MoveSouthWest
+	case 'h':
+		movement = MoveWest
+	case 'y':
+		movement = MoveNorthWest
 	case 0:
 		switch key {
 		case termbox.KeyArrowUp:
-			movement = Movement{0, -1}
+			movement = MoveNorth
 		case termbox.KeyArrowRight:
-			movement = Movement{1, 0}
+			movement = MoveEast
 		case termbox.KeyArrowDown:
-			movement = Movement{0, 1}
+			movement = MoveSouth
 		case termbox.KeyArrowLeft:
-			movement = Movement{-1, 0}
+			movement = MoveWest
 		default:
 			panic(fmt.Sprintf("Not a movement key: %s", key))
 		}

@@ -127,6 +127,7 @@ func (game *Game) Run() {
 
 // MainLoop is the Game's main loop. Ticks the UI until it closes.
 func (game *Game) MainLoop() {
+	game.ui.Paint()
 mainLoop:
 	for {
 		game.ui.Tick()

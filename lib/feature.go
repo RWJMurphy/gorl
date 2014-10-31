@@ -2,28 +2,38 @@ package gorl
 
 import (
 	"fmt"
+
 	"github.com/nsf/termbox-go"
 )
 
+// Feature is a visible, rendered part of a Dungeon
 type Feature interface {
-	Loc() Coord
 	Name() string
 	Char() rune
+
 	Color() termbox.Attribute
+	SetColor(termbox.Attribute)
+
+	Loc() Coord
+	SetLoc(Coord)
+
 	Flags() Flag
+
 	LightRadius() int
+	SetLightRadius(int)
 }
 
 type feature struct {
-	loc          Coord
-	name         string
-	char         rune
-	color        termbox.Attribute
-	flags        Flag
-	lightRadius  int
+	loc         Coord
+	name        string
+	char        rune
+	color       termbox.Attribute
+	flags       Flag
+	lightRadius int
 }
 
-func NewFeature(name string, char rune) *feature {
+// NewFeature returns a new Feature
+func NewFeature(name string, char rune) Feature {
 	f := &feature{}
 	f.name = name
 	f.char = char
@@ -33,6 +43,10 @@ func NewFeature(name string, char rune) *feature {
 
 func (f *feature) Loc() Coord {
 	return f.loc
+}
+
+func (f *feature) SetLoc(loc Coord) {
+	f.loc = loc
 }
 
 func (f *feature) Name() string {
@@ -47,12 +61,20 @@ func (f *feature) Color() termbox.Attribute {
 	return f.color
 }
 
+func (f *feature) SetColor(color termbox.Attribute) {
+	f.color = color
+}
+
 func (f *feature) Flags() Flag {
 	return f.flags
 }
 
 func (f *feature) LightRadius() int {
 	return f.lightRadius
+}
+
+func (f *feature) SetLightRadius(radius int) {
+	f.lightRadius = radius
 }
 
 func (f *feature) String() string {

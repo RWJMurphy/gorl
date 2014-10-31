@@ -2,23 +2,27 @@ package gorl
 
 import (
 	"fmt"
+
 	"github.com/imdario/mergo"
 	"github.com/nsf/termbox-go"
-	"unicode/utf8"
 )
 
+// Paintable is anything that can be painted
 type Paintable interface {
 	Paint()
 }
 
-type UiState int
+// UIState is the state of the UI
+type UIState int
 
 const (
-	StateGame UiState = iota
+	// StateGame is the default UI state -- shows the MapWidget, MessageLogWidget and MenuWidget; waits for input
+	StateGame UIState = iota
+	// StateClosed is a closed UI. Entering this state is a signal to shut the game down cleanly.
 	StateClosed
 )
 
-func (state UiState) String() string {
+func (state UIState) String() string {
 	switch state {
 	case StateGame:
 		return "StateGame"
@@ -29,29 +33,38 @@ func (state UiState) String() string {
 	}
 }
 
+// The UI for the Game
 type UI struct {
 	Paintables    []Paintable
 	cameraWidget  *CameraWidget
 	menuWidget    *MenuWidget
 	messageWidget *MessageLogWidget
 	messages      []string
-	State         UiState
+	State         UIState
 	game          *Game
 	dirty         bool
 }
 
+// A BoxStyle is a collection of runes for drawing boxes with PaintBorder
 type BoxStyle struct {
 	horizontal rune
 	vertical   rune
 	corner     rune
 }
 
+// The DefaultBoxStyle paints boxes that look like
+//   +--+
+//   |  |
+//   +--+
 var DefaultBoxStyle = BoxStyle{'-', '|', '+'}
 
+// Close cleans up after the UI
 func (ui *UI) Close() {
 	termbox.Close()
 }
 
+// NewUI creates a new UI, initiates termbox, and returns the UI.
+// Please `defer ui.Close`.
 func NewUI() (*UI, error) {
 	err := termbox.Init()
 	if err != nil {
@@ -62,22 +75,28 @@ func NewUI() (*UI, error) {
 	ui := &UI{}
 	ui.messages = make([]string, 0, 10)
 	ui.messageWidget = &MessageLogWidget{
-		0, height - height/4,
-		width, height / 4,
+		Widget{
+			0, height - height/4,
+			width, height / 4,
+			ui,
+		},
 		nil,
-		ui,
 	}
 	ui.cameraWidget = &CameraWidget{
-		0, 0,
-		width - width/4, height - height/4,
+		Widget{
+			0, 0,
+			width - width/4, height - height/4,
+			ui,
+		},
 		nil,
 		Coord{0, 0},
-		ui,
 	}
 	ui.menuWidget = &MenuWidget{
-		width - width/4, 0,
-		width / 4, height - height/4,
-		ui,
+		Widget{
+			width - width/4, 0,
+			width / 4, height - height/4,
+			ui,
+		},
 	}
 	ui.Paintables = []Paintable{
 		ui.messageWidget,
@@ -89,14 +108,22 @@ func NewUI() (*UI, error) {
 	return ui, nil
 }
 
-type CameraWidget struct {
+// A Widget represents a rectangular box in a fixed position in the UI.
+// When painted, it draws a border around itself.
+type Widget struct {
 	x, y          int
 	width, height int
-	dungeon       *Dungeon
-	center        Coord
 	ui            *UI
 }
 
+// A CameraWidget renders part of a Dungeon
+type CameraWidget struct {
+	Widget
+	dungeon *Dungeon
+	center  Coord
+}
+
+// Paint paints the CameraWidget to the UI
 func (camera *CameraWidget) Paint() {
 	var (
 		tile *Tile
@@ -124,55 +151,65 @@ func (camera *CameraWidget) Paint() {
 			}
 		}
 	}
-	camera.ui.PaintBorder(camera.x, camera.y, camera.x+camera.width-1, camera.y+camera.height-1, DefaultBoxStyle)
+	camera.Widget.Paint()
 }
 
+// A MessageLogWidget renders messages
 type MessageLogWidget struct {
-	x, y          int
-	width, height int
-	messages      []string
-	ui            *UI
+	Widget
+	messages []string
 }
 
+// Paint paints the MessageLogWidget to the UI
 func (messageLog *MessageLogWidget) Paint() {
 	for i, m := range messageLog.ui.messages {
 		messageLog.ui.PrintAt(messageLog.x+1, messageLog.y+1+i, m)
 	}
-	messageLog.ui.PaintBorder(messageLog.x, messageLog.y, messageLog.x+messageLog.width-1, messageLog.y+messageLog.height-1, DefaultBoxStyle)
+	messageLog.Widget.Paint()
 }
 
+// A MenuWidget in theory, displays a menu.
 type MenuWidget struct {
-	x, y          int
-	width, height int
-	ui            *UI
+	Widget
 }
 
+// Paint paints the Widget to the UI
+func (w *Widget) Paint() {
+	w.ui.PaintBorder(w.x, w.y, w.x+w.width-1, w.y+w.height-1, DefaultBoxStyle)
+}
+
+// Paint paints the MenuWidget to the UI
 func (menu *MenuWidget) Paint() {
-	menu.ui.PaintBorder(menu.x, menu.y, menu.x+menu.width-1, menu.y+menu.height-1, DefaultBoxStyle)
+	menu.Widget.Paint()
 }
 
+// PutRuneColor paints the rune r at position x, y with foreground color fg and
+// background bg.
 func (ui *UI) PutRuneColor(x, y int, r rune, fg, bg termbox.Attribute) {
 	termbox.SetCell(x, y, r, fg, bg)
 }
 
+// PutRune paints the rune r at positions x, y in the default colors.
 func (ui *UI) PutRune(x, y int, r rune) {
 	ui.PutRuneColor(x, y, r, termbox.ColorDefault, termbox.ColorDefault)
 }
 
+// PrintAt paints a string to the UI, left to right starting at x, y
 func (ui *UI) PrintAt(x, y int, s string) {
 	for i, r := range s {
 		ui.PutRune(x+i, y, r)
 	}
 }
 
-func (ui *UI) PrintCentered(s string) {
-	width, height := termbox.Size()
-	mid_w, mid_h := width/2, height/2
-	s_len := utf8.RuneCountInString(s)
-	ui.PrintAt(mid_w-s_len/2, mid_h, s)
-}
-
+// PaintBox fills a rectangular section with rune r. The rectangle is defined by
+// its corners (x1, y1) and (x2, y2).
 func (ui *UI) PaintBox(x1, y1, x2, y2 int, r rune) {
+	if x1 > x2 {
+		x1, x2 = x2, x1
+	}
+	if y1 > y2 {
+		y1, y2 = y2, y1
+	}
 	for x := x1; x <= x2; x++ {
 		for y := y1; y <= y2; y++ {
 			ui.PutRune(x, y, r)
@@ -180,18 +217,8 @@ func (ui *UI) PaintBox(x1, y1, x2, y2 int, r rune) {
 	}
 }
 
-func (ui *UI) PaintVerticalLine(x, y1, y2 int, r rune) {
-	for y := y1; y <= y2; y++ {
-		ui.PutRune(x, y, r)
-	}
-}
-
-func (ui *UI) PaintHorizontalLine(x1, y, x2 int, r rune) {
-	for x := x1; x <= x2; x++ {
-		ui.PutRune(x, y, r)
-	}
-}
-
+// PaintBorder paints a border along the rectangle (x1, y2), (x2, y2)
+// with the runes defines by style.
 func (ui *UI) PaintBorder(x1, y1, x2, y2 int, style BoxStyle) {
 	if x1 > x2 {
 		x1, x2 = x2, x1
@@ -215,6 +242,7 @@ func (ui *UI) PaintBorder(x1, y1, x2, y2 int, style BoxStyle) {
 	ui.PutRune(x2, y2, style.corner)
 }
 
+// Paint redraws the UI and its Paintables if the UI has been marked as dirty.
 func (ui *UI) Paint() {
 	if !ui.dirty {
 		return
@@ -227,11 +255,13 @@ func (ui *UI) Paint() {
 	ui.dirty = false
 }
 
+// PointCameraAt sets the dungeon and center for the CameraWidget
 func (ui *UI) PointCameraAt(d *Dungeon, c Coord) {
 	ui.cameraWidget.dungeon = d
 	ui.cameraWidget.center = c
 }
 
+// HandleKey handles a termbox.KeyEvent
 func (ui *UI) HandleKey(char rune, key termbox.Key) {
 	switch char {
 	case 'q':
@@ -245,24 +275,27 @@ func (ui *UI) HandleKey(char rune, key termbox.Key) {
 		case termbox.KeyArrowUp, termbox.KeyArrowRight, termbox.KeyArrowDown, termbox.KeyArrowLeft:
 			ui.HandleMovementKey(char, key)
 		default:
-			ui.game.AddMessage(fmt.Sprintf("Unhandled key: %s", key))
+			ui.game.AddMessage(fmt.Sprintf("Unhandled key: %s", string(key)))
 		}
 	default:
 		ui.game.AddMessage(fmt.Sprintf("Unhandled key: %c", char))
 	}
 }
 
+// Single tile Movement constants
 var (
-	MoveNorth     = Movement{0, -1}
+	MoveNorth = Movement{0, -1}
 	MoveNorthEast = Movement{1, -1}
-	MoveEast      = Movement{1, 0}
+	MoveEast = Movement{1, 0}
 	MoveSouthEast = Movement{1, 1}
-	MoveSouth     = Movement{0, 1}
+	MoveSouth = Movement{0, 1}
 	MoveSouthWest = Movement{-1, 1}
-	MoveWest      = Movement{-1, 0}
+	MoveWest = Movement{-1, 0}
 	MoveNorthWest = Movement{-1, -1}
 )
 
+// HandleMovementKey maps a key to its respective Movement, and passes it
+// to Game.Move
 func (ui *UI) HandleMovementKey(char rune, key termbox.Key) {
 	var movement Movement
 	switch char {
@@ -293,14 +326,15 @@ func (ui *UI) HandleMovementKey(char rune, key termbox.Key) {
 		case termbox.KeyArrowLeft:
 			movement = MoveWest
 		default:
-			panic(fmt.Sprintf("Not a movement key: %s", key))
+			panic(fmt.Sprintf("Not a movement key: %s", string(key)))
 		}
 	default:
-		panic(fmt.Sprintf("Not a movement key: %s", char))
+		panic(fmt.Sprintf("Not a movement key: %c", char))
 	}
 	ui.game.Move(movement)
 }
 
+// HandleEvent handles a termbox.Event
 func (ui *UI) HandleEvent(e termbox.Event) {
 	switch e.Type {
 	case termbox.EventKey:
@@ -312,6 +346,7 @@ func (ui *UI) HandleEvent(e termbox.Event) {
 	}
 }
 
+// Tick waits on a termbox.Event, handles it, and repaints the UI if needed
 func (ui *UI) Tick() {
 	event := termbox.PollEvent()
 	ui.HandleEvent(event)

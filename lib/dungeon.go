@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+
 	"github.com/nsf/termbox-go"
 )
 
+// A Coord is a pair of x, y coordinates.
 type Coord struct {
 	x, y int
 }
@@ -15,6 +17,7 @@ func (c Coord) String() string {
 	return fmt.Sprintf("<Coord x:%d, y:%d>", c.x, c.y)
 }
 
+// A Tile represents a square in a Dungeon.
 type Tile struct {
 	c     rune
 	color termbox.Attribute
@@ -25,45 +28,56 @@ func (t Tile) String() string {
 	return fmt.Sprintf("<Tile c:%c flags:%s>", t.c, t.flags)
 }
 
+// Flag is used to set boolean states on various objects like Tiles,
+// Features, etc.
 type Flag uint8
 
 const (
+	// FlagCrossable is set if the object can be moved over
 	FlagCrossable Flag = 1 << iota
+	// FlagLit is set if the object is lit
 	FlagLit
+	// FlagVisible is set if the object is visible by the Player
 	FlagVisible
+	// FlagBlocksLight is set if the object blocks light
 	FlagBlocksLight
 )
 
 func (f Flag) String() string {
-	on_flags := make([]string, 0)
+	var onFlags []string
 
 	if f&FlagCrossable != 0 {
-		on_flags = append(on_flags, "Crossable")
+		onFlags = append(onFlags, "Crossable")
 	}
 	if f&FlagLit != 0 {
-		on_flags = append(on_flags, "Lit")
+		onFlags = append(onFlags, "Lit")
 	}
 	if f&FlagVisible != 0 {
-		on_flags = append(on_flags, "Visible")
+		onFlags = append(onFlags, "Visible")
 	}
 	if f&FlagBlocksLight != 0 {
-		on_flags = append(on_flags, "BlocksLight")
+		onFlags = append(onFlags, "BlocksLight")
 	}
 
-	if len(on_flags) == 0 {
-		on_flags = append(on_flags, "None")
+	if len(onFlags) == 0 {
+		onFlags = append(onFlags, "None")
 	}
 
-	return fmt.Sprintf("<Flag %s>", strings.Join(on_flags, "|"))
+	return fmt.Sprintf("<Flag %s>", strings.Join(onFlags, "|"))
 }
 
+// NewTile creates and returns a new Tile. The Tile will be rendered as c,
+// in the color color, and has its flags set to flags.
 func NewTile(c rune, color termbox.Attribute, flags Flag) Tile {
 	t := Tile{c, color, flags}
 	return t
 }
 
+// InvalidTile represents a section of the Dungeon that is out of bounds, or
+// otherwise not considered "valid".
 var InvalidTile = Tile{' ', termbox.ColorBlack, Flag(0) | FlagBlocksLight}
 
+// Dungeon represents a level of the game.
 type Dungeon struct {
 	width, height int
 	origin        Coord
@@ -72,12 +86,15 @@ type Dungeon struct {
 	features      map[Coord]Feature
 }
 
+// NewDungeon creates and returns a new Dungeon of the specified width and height.
+//
+// The dungeon is populated with floor tiles, and random walls tiles.
 func NewDungeon(width, height int) *Dungeon {
 	size := width * height
 	tiles := make([][]Tile, height)
-	tiles_raw := make([]Tile, size)
+	tilesRaw := make([]Tile, size)
 	for i := range tiles {
-		tiles[i], tiles_raw = tiles_raw[:width], tiles_raw[width:]
+		tiles[i], tilesRaw = tilesRaw[:width], tilesRaw[width:]
 	}
 
 	m := &Dungeon{
@@ -104,28 +121,31 @@ func NewDungeon(width, height int) *Dungeon {
 	return m
 }
 
+// AddFeature adds a Feature feature to the Dungeon.
 func (d *Dungeon) AddFeature(feature Feature) {
-	if other_feature, exists := d.features[feature.Loc()]; exists {
+	if otherFeature, exists := d.features[feature.Loc()]; exists {
 		panic(fmt.Sprintf(
 			"Tried to put two features on same location: %s, %s",
 			feature,
-			other_feature,
+			otherFeature,
 		))
 	}
 	d.features[feature.Loc()] = feature
 }
 
+// AddMob adds Mob mob to the Dungeon.
 func (d *Dungeon) AddMob(mob Mob) {
-	if other_mob, exists := d.mobs[mob.Loc()]; exists {
+	if otherMob, exists := d.mobs[mob.Loc()]; exists {
 		panic(fmt.Sprintf(
 			"Tried to put two mobs on same location: %s, %s",
 			mob,
-			other_mob,
+			otherMob,
 		))
 	}
 	d.mobs[mob.Loc()] = mob
 }
 
+// DeleteMob removes Mob mob from the Dungeon.
 func (d *Dungeon) DeleteMob(mob Mob) {
 	if _, exists := d.mobs[mob.Loc()]; exists {
 		delete(d.mobs, mob.Loc())
@@ -134,28 +154,32 @@ func (d *Dungeon) DeleteMob(mob Mob) {
 	}
 }
 
+// MoveMob moves Mob mob in the direction move.
+// No error checking is performed; if mob is not in the Dungeon, or the move
+// place it outside the Dungeon, too bad.
 func (d *Dungeon) MoveMob(mob Mob, move Movement) {
 	d.DeleteMob(mob)
 	mob.Move(move)
 	d.AddMob(mob)
 }
 
+// CalculateLighting ranges over each Mob and Feature in the Dungeon, setting
+// FlagLit on any tiles within the Feature's LightRadius that have a clear line
+// sight from the Feature
 func (d *Dungeon) CalculateLighting() {
 	for loc, mob := range d.mobs {
-		d.FlagByLineOfSight(loc, mob.LightRadius(), FlagLit)
+		if mob.LightRadius() > 0 {
+			d.FlagByLineOfSight(loc, mob.LightRadius(), FlagLit)
+		}
 	}
 	for loc, feature := range d.features {
-		d.FlagByLineOfSight(loc, feature.LightRadius(), FlagLit)
+		if feature.LightRadius() > 0 {
+			d.FlagByLineOfSight(loc, feature.LightRadius(), FlagLit)
+		}
 	}
 }
 
-var octant_multiplier = [4][8]int{
-	{1, 0, 0, -1, -1, 0, 0, 1},
-	{0, 1, -1, 0, 0, -1, 1, 0},
-	{0, 1, 1, 0, 0, -1, -1, 0},
-	{1, 0, 0, 1, -1, 0, 0, -1},
-}
-
+// ResetFlag unsets flag on every Tile in the Dungeon
 func (d *Dungeon) ResetFlag(flag Flag) {
 	for x := 0; x < d.width; x++ {
 		for y := 0; y < d.width; y++ {
@@ -164,7 +188,17 @@ func (d *Dungeon) ResetFlag(flag Flag) {
 	}
 }
 
-// Recursive shadow casting
+var octantMultiplier = [4][8]int{
+	{1, 0, 0, -1, -1, 0, 0, 1},
+	{0, 1, -1, 0, 0, -1, 1, 0},
+	{0, 1, 1, 0, 0, -1, -1, 0},
+	{1, 0, 0, 1, -1, 0, 0, -1},
+}
+
+// FlagByLineOfSight uses a recusive shadowcasting algorithm to set flag on any
+// Tile in the Dungeon within radius of origin if there is a clear line of sight
+// from the origin to the Tile.
+//
 // Based on http://www.roguebasin.com/index.php?title=Ruby_shadowcasting_implementation
 // which in turn is an implementation of Björn Bergström's
 // http://www.roguebasin.com/index.php?title=FOV_using_recursive_shadowcasting
@@ -181,10 +215,10 @@ func (d *Dungeon) FlagByLineOfSight(origin Coord, radius int, flag Flag) {
 			origin.x, origin.y, 1,
 			1.0, 0.0,
 			radius,
-			octant_multiplier[0][octant],
-			octant_multiplier[1][octant],
-			octant_multiplier[2][octant],
-			octant_multiplier[3][octant],
+			octantMultiplier[0][octant],
+			octantMultiplier[1][octant],
+			octantMultiplier[2][octant],
+			octantMultiplier[3][octant],
 			flag,
 		)
 	}
@@ -192,59 +226,59 @@ func (d *Dungeon) FlagByLineOfSight(origin Coord, radius int, flag Flag) {
 
 func (d *Dungeon) castFlag(
 	cx, cy, row int,
-	start_slope, end_slope float64,
+	startSlope, endSlope float64,
 	radius int,
 	xx, xy, yx, yy int,
 	flag Flag,
 ) {
 	var (
-		dx, dy, j                         int
-		dx_f, dy_f                        float64
-		l_slope, r_slope, new_start_slope float64
+		dx, dy, j                            int
+		dxFloat, dyFloat                     float64
+		leftSlope, rightSlope, newStartSlope float64
 	)
-	if start_slope < end_slope {
+	if startSlope < endSlope {
 		return
 	}
-	radius_2 := radius * radius
+	radiusSquared := radius * radius
 	for j = row; j <= radius; j++ {
 		dx, dy = -j-1, -j
 		blocked := false
 		for dx <= 0 {
-			dx += 1
+			dx++
 			// Translate the dx, dy coordinates into map coordinates
-			mx, my := cx+dx*xx+dy*xy, cy+dx*yx+dy*yy
-			if mx < 0 || mx >= d.width || my < 0 || my >= d.height {
+			mapX, mapY := cx+dx*xx+dy*xy, cy+dx*yx+dy*yy
+			if mapX < 0 || mapX >= d.width || mapY < 0 || mapY >= d.height {
 				continue
 			}
-			// l_slope and r_slope store the slopes of the left and
+			// leftSlope and rightSlope store the slopes of the left and
 			// right extremeties of the square we're considering
-			dx_f, dy_f = float64(dx), float64(dy)
-			l_slope, r_slope = (dx_f-0.5)/(dy_f+0.5), (dx_f+0.5)/(dy_f-0.5)
-			if start_slope < r_slope {
+			dxFloat, dyFloat = float64(dx), float64(dy)
+			leftSlope, rightSlope = (dxFloat-0.5)/(dyFloat+0.5), (dxFloat+0.5)/(dyFloat-0.5)
+			if startSlope < rightSlope {
 				continue
-			} else if end_slope > l_slope {
+			} else if endSlope > leftSlope {
 				break
 			} else {
-				t := d.Tile(mx, my)
+				t := d.Tile(mapX, mapY)
 				// our light beam is touching this square; flag it:
-				if dx*dx+dy*dy < radius_2 {
+				if dx*dx+dy*dy < radiusSquared {
 					t.flags |= flag
 				}
 				if blocked {
 					// we're scanning a row of blocked squares
 					if t.BlocksLight() {
-						new_start_slope = r_slope
+						newStartSlope = rightSlope
 						continue
 					} else {
 						blocked = false
-						start_slope = new_start_slope
+						startSlope = newStartSlope
 					}
 				} else {
 					if t.BlocksLight() && j < radius {
 						// this is a blocking square, start a child scan:
 						blocked = true
-						d.castFlag(cx, cy, j+1, start_slope, l_slope, radius, xx, xy, yx, yy, flag)
-						new_start_slope = r_slope
+						d.castFlag(cx, cy, j+1, startSlope, leftSlope, radius, xx, xy, yx, yy, flag)
+						newStartSlope = rightSlope
 					}
 				}
 			}
@@ -255,6 +289,7 @@ func (d *Dungeon) castFlag(
 	}
 }
 
+// Tile fetches the Dungeon Tile at (x, y)
 func (d *Dungeon) Tile(x, y int) *Tile {
 	if x < 0 || x >= d.width || y < 0 || y >= d.height {
 		t := InvalidTile
@@ -263,18 +298,22 @@ func (d *Dungeon) Tile(x, y int) *Tile {
 	return &d.tiles[y][x]
 }
 
+// Crossable returns true if the Tile can be moved across
 func (t *Tile) Crossable() bool {
 	return t.flags&FlagCrossable != 0
 }
 
+// Lit returns true if the Tile is lit by a light source
 func (t *Tile) Lit() bool {
 	return t.flags&FlagLit != 0
 }
 
+// Visible returns true if the Tile is within the Player's FOV
 func (t *Tile) Visible() bool {
 	return t.flags&FlagVisible != 0
 }
 
+// BlocksLight returns true if the Tile does not allow light to pass through
 func (t *Tile) BlocksLight() bool {
 	return t.flags&FlagBlocksLight != 0
 }

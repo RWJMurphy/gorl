@@ -1,19 +1,27 @@
 package gorl
 
-type Player struct {
+// Player represents the player -- it's basically a special form of Mob
+type Player interface {
+	Mob
+}
+
+type player struct {
 	mob
 }
 
 const (
+	// PlayerVisionRadius sets how far the player can see
 	PlayerVisionRadius = 100
-	PlayerLightRadius  = 2
+	// PlayerLightRadius sets how far the player emits light
+	PlayerLightRadius = 2
 )
 
-func NewPlayer() *Player {
-	p := &Player{
-		*NewMob("Player", '@'),
+// NewPlayer creates and returns a new Player
+func NewPlayer() Player {
+	p := &player{
+		*NewMob("Player", '@').(*mob),
 	}
-	p.visionRadius = PlayerVisionRadius
-	p.lightRadius = PlayerLightRadius
+	p.mob.visionRadius = PlayerVisionRadius
+	p.mob.lightRadius = PlayerLightRadius
 	return p
 }

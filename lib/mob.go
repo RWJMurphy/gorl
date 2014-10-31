@@ -2,6 +2,7 @@ package gorl
 
 import "fmt"
 
+// Mob is a Movable OBject.
 type Mob interface {
 	Feature
 	VisionRadius() int
@@ -13,9 +14,10 @@ type mob struct {
 	visionRadius int
 }
 
-func NewMob(name string, char rune) *mob {
+// NewMob creates and returns a new Mob
+func NewMob(name string, char rune) Mob {
 	m := &mob{}
-	m.feature = *NewFeature(name, char)
+	m.feature = *NewFeature(name, char).(*feature)
 	return m
 }
 

@@ -25,3 +25,7 @@ func NewPlayer() Player {
 	p.mob.lightRadius = PlayerLightRadius
 	return p
 }
+
+func (p *player) Tick(d *Dungeon) bool {
+	return false
+}

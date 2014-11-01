@@ -1,13 +1,29 @@
 package main
 
 import (
+	"os"
+	"log"
 	"github.com/RWJMurphy/gorl/lib"
 )
 
+const logFilePath = "gorl.log"
+
 func main() {
-	g, err := gorl.NewGame()
+	logFile, err := os.OpenFile(
+		logFilePath,
+		os.O_RDWR|os.O_APPEND|os.O_CREATE,
+		0666,
+	)
 	if err != nil {
 		panic(err)
+	}
+	defer logFile.Sync()
+	defer logFile.Close()
+	log := log.New(logFile, "gorl: ", log.Ldate|log.Ltime|log.Lshortfile)
+	log.Println("Starting gorl")
+	g, err := gorl.NewGame(*log)
+	if err != nil {
+		log.Panic(err)
 	}
 	defer g.Close()
 	g.Run()

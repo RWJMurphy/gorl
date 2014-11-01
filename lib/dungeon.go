@@ -1,6 +1,7 @@
 package gorl
 
 import (
+	"log"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -84,12 +85,13 @@ type Dungeon struct {
 	tiles         [][]Tile
 	mobs          map[Coord]Mob
 	features      map[Coord]Feature
+	log           log.Logger
 }
 
 // NewDungeon creates and returns a new Dungeon of the specified width and height.
 //
 // The dungeon is populated with floor tiles, and random walls tiles.
-func NewDungeon(width, height int) *Dungeon {
+func NewDungeon(width, height int, log log.Logger) *Dungeon {
 	size := width * height
 	tiles := make([][]Tile, height)
 	tilesRaw := make([]Tile, size)
@@ -103,10 +105,11 @@ func NewDungeon(width, height int) *Dungeon {
 		tiles,
 		make(map[Coord]Mob),
 		make(map[Coord]Feature),
+		log,
 	}
 
 	var tile Tile
-	wallChance := 0.1
+	wallChance := 0.05
 	for x := 0; x < width; x++ {
 		for y := 0; y < width; y++ {
 			if rand.Float64() <= wallChance {
@@ -124,11 +127,11 @@ func NewDungeon(width, height int) *Dungeon {
 // AddFeature adds a Feature feature to the Dungeon.
 func (d *Dungeon) AddFeature(feature Feature) {
 	if otherFeature, exists := d.features[feature.Loc()]; exists {
-		panic(fmt.Sprintf(
-			"Tried to put two features on same location: %s, %s",
+		d.log.Panicf(
+			"Tried to put two features on same location: %s, %s\n",
 			feature,
 			otherFeature,
-		))
+		)
 	}
 	d.features[feature.Loc()] = feature
 }
@@ -136,11 +139,11 @@ func (d *Dungeon) AddFeature(feature Feature) {
 // AddMob adds Mob mob to the Dungeon.
 func (d *Dungeon) AddMob(mob Mob) {
 	if otherMob, exists := d.mobs[mob.Loc()]; exists {
-		panic(fmt.Sprintf(
-			"Tried to put two mobs on same location: %s, %s",
+		d.log.Panicf(
+			"Tried to put two mobs on same location: %s, %s\n",
 			mob,
 			otherMob,
-		))
+		)
 	}
 	d.mobs[mob.Loc()] = mob
 }
@@ -150,17 +153,25 @@ func (d *Dungeon) DeleteMob(mob Mob) {
 	if _, exists := d.mobs[mob.Loc()]; exists {
 		delete(d.mobs, mob.Loc())
 	} else {
-		panic(fmt.Sprintf("Tried to delete non-existent mob: %s", mob))
+		d.log.Panicf("Tried to delete non-existent mob: %s\n", mob)
 	}
 }
 
-// MoveMob moves Mob mob in the direction move.
-// No error checking is performed; if mob is not in the Dungeon, or the move
-// place it outside the Dungeon, too bad.
-func (d *Dungeon) MoveMob(mob Mob, move Movement) {
+// MoveMob attempts to move mob in the direction move, returning true if
+// successful and false otherwise.
+func (d *Dungeon) MoveMob(mob Mob, move Movement) bool {
+	dest := mob.Loc().Plus(move)
+	_, blocked := d.mobs[dest]
+	if blocked {
+		return false
+	}
+	if !d.Tile(dest.x, dest.y).Crossable() {
+		return false
+	}
 	d.DeleteMob(mob)
 	mob.Move(move)
 	d.AddMob(mob)
+	return true
 }
 
 // CalculateLighting ranges over each Mob and Feature in the Dungeon, setting

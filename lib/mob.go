@@ -1,12 +1,16 @@
 package gorl
 
-import "fmt"
+import (
+	"fmt"
+	"math/rand"
+)
 
 // Mob is a Movable OBject.
 type Mob interface {
 	Feature
 	VisionRadius() int
 	Move(Movement)
+	Tick(*Dungeon) bool
 }
 
 type mob struct {
@@ -19,6 +23,11 @@ func NewMob(name string, char rune) Mob {
 	m := &mob{}
 	m.feature = *NewFeature(name, char).(*feature)
 	return m
+}
+
+func (m *mob) Tick(d *Dungeon) bool {
+	dx, dy := rand.Intn(3)-1, rand.Intn(3)-1
+	return d.MoveMob(m, Movement{dx, dy})
 }
 
 func (m *mob) VisionRadius() int {

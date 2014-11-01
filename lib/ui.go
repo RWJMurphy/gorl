@@ -2,6 +2,7 @@ package gorl
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/imdario/mergo"
 	"github.com/nsf/termbox-go"
@@ -40,9 +41,10 @@ type UI struct {
 	menuWidget    *MenuWidget
 	messageWidget *MessageLogWidget
 	messages      []string
-	State         UIState
+	state         UIState
 	game          *Game
 	dirty         bool
+	log           log.Logger
 }
 
 // A BoxStyle is a collection of runes for drawing boxes with PaintBorder
@@ -65,7 +67,7 @@ func (ui *UI) Close() {
 
 // NewUI creates a new UI, initiates termbox, and returns the UI.
 // Please `defer ui.Close`.
-func NewUI() (*UI, error) {
+func NewUI(game *Game) (*UI, error) {
 	err := termbox.Init()
 	if err != nil {
 		return nil, err
@@ -73,6 +75,8 @@ func NewUI() (*UI, error) {
 
 	width, height := termbox.Size()
 	ui := &UI{}
+	ui.game = game
+	ui.log = game.log
 	ui.messages = make([]string, 0, 10)
 	ui.messageWidget = &MessageLogWidget{
 		Widget{
@@ -103,7 +107,7 @@ func NewUI() (*UI, error) {
 		ui.cameraWidget,
 		ui.menuWidget,
 	}
-	ui.State = StateGame
+	ui.state = StateGame
 	ui.dirty = true
 	return ui, nil
 }
@@ -227,7 +231,7 @@ func (ui *UI) PaintBorder(x1, y1, x2, y2 int, style BoxStyle) {
 		y1, y2 = y2, y1
 	}
 	if err := mergo.Merge(&style, DefaultBoxStyle); err != nil {
-		panic(err)
+		ui.log.Panic(err)
 	}
 
 	ui.PaintBox(x1+1, y1, x2-1, y1, style.horizontal)
@@ -245,8 +249,10 @@ func (ui *UI) PaintBorder(x1, y1, x2, y2 int, style BoxStyle) {
 // Paint redraws the UI and its Paintables if the UI has been marked as dirty.
 func (ui *UI) Paint() {
 	if !ui.dirty {
+		ui.log.Println("ui.Paint: ui not dirty, nothing to do")
 		return
 	}
+	ui.log.Println("ui.Paint: painting")
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 	for _, p := range ui.Paintables {
 		p.Paint()
@@ -262,23 +268,38 @@ func (ui *UI) PointCameraAt(d *Dungeon, c Coord) {
 }
 
 // HandleKey handles a termbox.KeyEvent
-func (ui *UI) HandleKey(char rune, key termbox.Key) {
+func (ui *UI) HandleKey(char rune, key termbox.Key) GameState {
 	switch char {
 	case 'q':
-		ui.State = StateClosed
+		return GameClosed
 	case 'h', 'j', 'k', 'l', 'y', 'u', 'b', 'n':
-		ui.HandleMovementKey(char, key)
+		moved := ui.HandleMovementKey(char, key)
+		if moved {
+			return GameWorldTurn
+		} else {
+			return ui.game.state
+		}
 	case 0:
 		switch key {
 		case termbox.KeyCtrlC, termbox.KeyEsc:
-			ui.State = StateClosed
+			return GameClosed
 		case termbox.KeyArrowUp, termbox.KeyArrowRight, termbox.KeyArrowDown, termbox.KeyArrowLeft:
-			ui.HandleMovementKey(char, key)
+			if moved := ui.HandleMovementKey(char, key); moved {
+				return GameWorldTurn
+			} else {
+				return ui.game.state
+			}
 		default:
-			ui.game.AddMessage(fmt.Sprintf("Unhandled key: %s", string(key)))
+			msg := fmt.Sprintf("Unhandled key: %s", string(key))
+			ui.log.Println(msg)
+			ui.game.AddMessage(msg)
+			return ui.game.state
 		}
 	default:
-		ui.game.AddMessage(fmt.Sprintf("Unhandled key: %c", char))
+		msg := fmt.Sprintf("Unhandled key: %c", char)
+		ui.log.Println(msg)
+		ui.game.AddMessage(msg)
+		return ui.game.state
 	}
 }
 
@@ -295,8 +316,8 @@ var (
 )
 
 // HandleMovementKey maps a key to its respective Movement, and passes it
-// to Game.Move
-func (ui *UI) HandleMovementKey(char rune, key termbox.Key) {
+// to Game.Move. Returns true if the move was successful.
+func (ui *UI) HandleMovementKey(char rune, key termbox.Key) bool {
 	var movement Movement
 	switch char {
 	case 'k':
@@ -326,29 +347,34 @@ func (ui *UI) HandleMovementKey(char rune, key termbox.Key) {
 		case termbox.KeyArrowLeft:
 			movement = MoveWest
 		default:
-			panic(fmt.Sprintf("Not a movement key: %s", string(key)))
+			ui.log.Panicf("Not a movement key: %s\n", string(key))
 		}
 	default:
-		panic(fmt.Sprintf("Not a movement key: %c", char))
+		ui.log.Panicf("Not a movement key: %c\n", char)
 	}
-	ui.game.Move(movement)
+	return ui.game.Move(movement)
 }
 
 // HandleEvent handles a termbox.Event
-func (ui *UI) HandleEvent(e termbox.Event) {
+func (ui *UI) HandleEvent(e termbox.Event) GameState {
 	switch e.Type {
 	case termbox.EventKey:
-		ui.HandleKey(e.Ch, e.Key)
+		return ui.HandleKey(e.Ch, e.Key)
 	case termbox.EventResize:
 		ui.dirty = true
+		return ui.game.state
+	default:
+		fallthrough
 	case termbox.EventError:
-		panic(e.Err)
+		ui.log.Panic(e.Err)
+		return GameInvalidState
 	}
 }
 
-// Tick waits on a termbox.Event, handles it, and repaints the UI if needed
-func (ui *UI) Tick() {
+// WaitAndHandleInput waits on a termbox.Event, handles it, and repaints the UI if needed.
+// Returns a GameState.
+func (ui *UI) WaitAndHandleInput() GameState {
 	event := termbox.PollEvent()
-	ui.HandleEvent(event)
-	ui.Paint()
+	nextState := ui.HandleEvent(event)
+	return nextState
 }

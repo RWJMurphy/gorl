@@ -1,8 +1,8 @@
 package gorl
 
 import (
-	"log"
 	"fmt"
+	"log"
 	"math/rand"
 	"strings"
 

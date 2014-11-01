@@ -303,13 +303,13 @@ func (ui *UI) HandleKey(char rune, key termbox.Key) GameState {
 
 // Single tile Movement constants
 var (
-	MoveNorth = Movement{0, -1}
+	MoveNorth     = Movement{0, -1}
 	MoveNorthEast = Movement{1, -1}
-	MoveEast = Movement{1, 0}
+	MoveEast      = Movement{1, 0}
 	MoveSouthEast = Movement{1, 1}
-	MoveSouth = Movement{0, 1}
+	MoveSouth     = Movement{0, 1}
 	MoveSouthWest = Movement{-1, 1}
-	MoveWest = Movement{-1, 0}
+	MoveWest      = Movement{-1, 0}
 	MoveNorthWest = Movement{-1, -1}
 )
 

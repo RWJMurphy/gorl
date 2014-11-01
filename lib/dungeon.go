@@ -207,7 +207,7 @@ func (d *Dungeon) CalculateLighting() {
 // ResetFlag unsets flag on every Tile in the Dungeon
 func (d *Dungeon) ResetFlag(flag Flag) {
 	for x := 0; x < d.width; x++ {
-		for y := 0; y < d.width; y++ {
+		for y := 0; y < d.height; y++ {
 			d.tiles[y][x].flags &= ^flag
 		}
 	}

@@ -1,8 +1,8 @@
 package gorl
 
 import (
-	"log"
 	"fmt"
+	"log"
 	"math/rand"
 )
 
@@ -21,9 +21,9 @@ type Mob interface {
 type mob struct {
 	feature
 	visionRadius int
-	inventory []Item
-	dungeon *Dungeon
-	lastTicked uint
+	inventory    []Item
+	dungeon      *Dungeon
+	lastTicked   uint
 
 	log log.Logger
 }

@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/RWJMurphy/gorl/lib"
-	"runtime"
 	"log"
 	"os"
+	"runtime"
 )
 
 const logFilePath = "gorl.log"

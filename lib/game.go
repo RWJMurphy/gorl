@@ -97,7 +97,11 @@ func NewGame(log log.Logger) (*Game, error) {
 
 	dungeon.ResetFlag(FlagLit | FlagVisible)
 	dungeon.CalculateLighting()
-	dungeon.FlagByLineOfSight(game.player.Loc(), game.player.VisionRadius(), FlagVisible)
+	dungeon.OnTilesInLineOfSight(game.player.Loc(), game.player.VisionRadius(), func(t *Tile) {
+		if t.Lit() {
+			t.flags |= FlagVisible | FlagSeen
+		}
+	})
 
 	ui, err := NewUI(game)
 	if err != nil {
@@ -132,7 +136,11 @@ func (game *Game) Move(movement Movement) bool {
 
 	game.currentDungeon.ResetFlag(FlagLit | FlagVisible)
 	game.currentDungeon.CalculateLighting()
-	game.currentDungeon.FlagByLineOfSight(game.player.Loc(), game.player.VisionRadius(), FlagVisible)
+	game.currentDungeon.OnTilesInLineOfSight(game.player.Loc(), game.player.VisionRadius(), func(t *Tile) {
+		if t.Lit() {
+			t.flags |= FlagVisible | FlagSeen
+		}
+	})
 
 	game.ui.PointCameraAt(game.currentDungeon, game.player.Loc())
 	game.ui.dirty = true

@@ -40,6 +40,8 @@ const (
 	FlagLit
 	// FlagVisible is set if the object is visible by the Player
 	FlagVisible
+	// FlagSeen is set if the object has been seen by the Player
+	FlagSeen
 	// FlagBlocksLight is set if the object blocks light
 	FlagBlocksLight
 )
@@ -55,6 +57,9 @@ func (f Flag) String() string {
 	}
 	if f&FlagVisible != 0 {
 		onFlags = append(onFlags, "Visible")
+	}
+	if f&FlagSeen != 0 {
+		onFlags = append(onFlags, "Seen")
 	}
 	if f&FlagBlocksLight != 0 {
 		onFlags = append(onFlags, "BlocksLight")
@@ -193,7 +198,7 @@ func (d *Dungeon) CalculateLighting() {
 		radius = mob.LightRadius()
 		if radius > 0 {
 			goroutineCount++
-			go func(loc Coord, radius int){
+			go func(loc Coord, radius int) {
 				d.FlagByLineOfSight(loc, radius, FlagLit)
 				signal <- true
 			}(loc, mob.LightRadius())
@@ -203,7 +208,7 @@ func (d *Dungeon) CalculateLighting() {
 		radius = feature.LightRadius()
 		if radius > 0 {
 			goroutineCount++
-			go func(loc Coord, radius int){
+			go func(loc Coord, radius int) {
 				d.FlagByLineOfSight(loc, radius, FlagLit)
 				signal <- true
 			}(loc, feature.LightRadius())
@@ -241,13 +246,21 @@ var octantMultiplier = [4][8]int{
 // TODO: rewrite based on something with a clear FOSS license, e.g.
 // https://bitbucket.org/munificent/amaranth/src/2fc3311d903f/Amaranth.Engine/Classes/Fov.cs
 func (d *Dungeon) FlagByLineOfSight(origin Coord, radius int, flag Flag) {
+	d.OnTilesInLineOfSight(origin, radius, func(t *Tile) {
+		t.flags |= flag
+	})
+}
+
+type tileFunc func(*Tile)
+
+func (d *Dungeon) OnTilesInLineOfSight(origin Coord, radius int, do tileFunc) {
 	if radius == 0 {
 		return
 	}
-	d.tiles[origin.y][origin.x].flags |= flag
+	do(&d.tiles[origin.y][origin.x])
 	signal := make(chan bool)
 	for octant := 0; octant < 8; octant++ {
-		go func(origin Coord, radius int, flag Flag, octant int){
+		go func(origin Coord, radius int, do tileFunc, octant int) {
 			d.castFlag(
 				origin.x, origin.y, 1,
 				1.0, 0.0,
@@ -256,13 +269,13 @@ func (d *Dungeon) FlagByLineOfSight(origin Coord, radius int, flag Flag) {
 				octantMultiplier[1][octant],
 				octantMultiplier[2][octant],
 				octantMultiplier[3][octant],
-				flag,
+				do,
 			)
 			signal <- true
-		}(origin, radius, flag, octant)
+		}(origin, radius, do, octant)
 	}
 	for octant := 0; octant < 8; octant++ {
-		<- signal
+		<-signal
 	}
 }
 
@@ -271,7 +284,7 @@ func (d *Dungeon) castFlag(
 	startSlope, endSlope float64,
 	radius int,
 	xx, xy, yx, yy int,
-	flag Flag,
+	do tileFunc,
 ) {
 	var (
 		dx, dy, j                            int
@@ -304,7 +317,7 @@ func (d *Dungeon) castFlag(
 				t := d.Tile(mapX, mapY)
 				// our light beam is touching this square; flag it:
 				if dx*dx+dy*dy < radiusSquared {
-					t.flags |= flag
+					do(t)
 				}
 				if blocked {
 					// we're scanning a row of blocked squares
@@ -319,7 +332,7 @@ func (d *Dungeon) castFlag(
 					if t.BlocksLight() && j < radius {
 						// this is a blocking square, start a child scan:
 						blocked = true
-						d.castFlag(cx, cy, j+1, startSlope, leftSlope, radius, xx, xy, yx, yy, flag)
+						d.castFlag(cx, cy, j+1, startSlope, leftSlope, radius, xx, xy, yx, yy, do)
 						newStartSlope = rightSlope
 					}
 				}
@@ -353,6 +366,11 @@ func (t *Tile) Lit() bool {
 // Visible returns true if the Tile is within the Player's FOV
 func (t *Tile) Visible() bool {
 	return t.flags&FlagVisible != 0
+}
+
+// Seen returns true if the Tile has ever been seen by the Player
+func (t *Tile) Seen() bool {
+	return t.flags&FlagSeen != 0
 }
 
 // BlocksLight returns true if the Tile does not allow light to pass through

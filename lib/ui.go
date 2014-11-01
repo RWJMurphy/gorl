@@ -130,12 +130,13 @@ type CameraWidget struct {
 // Paint paints the CameraWidget to the UI
 func (camera *CameraWidget) Paint() {
 	var (
-		tile *Tile
-		loc  Coord
-		out  Coord
-		x, y int
-		f    Feature
-		ok   bool
+		tile  *Tile
+		loc   Coord
+		out   Coord
+		x, y  int
+		f     Feature
+		ok    bool
+		color termbox.Attribute
 	)
 	ne := Coord{camera.center.x - camera.width/2, camera.center.y - camera.height/2}
 
@@ -144,13 +145,18 @@ func (camera *CameraWidget) Paint() {
 			loc = Coord{ne.x + x, ne.y + y}
 			out = Coord{camera.x + x, camera.y + y}
 			tile = camera.dungeon.Tile(loc.x, loc.y)
-			if tile.Visible() && tile.Lit() {
-				camera.ui.PutRuneColor(out.x, out.y, tile.c, tile.color, termbox.ColorDefault)
-				if f, ok = camera.dungeon.features[loc]; ok {
-					camera.ui.PutRuneColor(out.x, out.y, f.Char(), f.Color(), termbox.ColorDefault)
-				}
-				if f, ok = camera.dungeon.mobs[loc]; ok {
-					camera.ui.PutRuneColor(out.x, out.y, f.Char(), f.Color(), termbox.ColorDefault)
+			if tile.Seen() || tile.Visible() {
+				color = tile.color
+				if tile.Visible() {
+					camera.ui.PutRuneColor(out.x, out.y, tile.c, color|termbox.AttrBold, termbox.ColorDefault)
+					if f, ok = camera.dungeon.features[loc]; ok {
+						camera.ui.PutRuneColor(out.x, out.y, f.Char(), f.Color(), termbox.ColorDefault)
+					}
+					if f, ok = camera.dungeon.mobs[loc]; ok {
+						camera.ui.PutRuneColor(out.x, out.y, f.Char(), f.Color(), termbox.ColorDefault)
+					}
+				} else {
+					camera.ui.PutRuneColor(out.x, out.y, tile.c, color, termbox.ColorDefault)
 				}
 			}
 		}

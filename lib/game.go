@@ -18,9 +18,13 @@ const (
 type GameState int
 
 const (
+	// GameInvalidState represents any bad state
 	GameInvalidState GameState = iota
+	// GamePlayerTurn is when waiting on the player to make an action
 	GamePlayerTurn
+	// GameWorldTurn is when the AI and world objects get to act
 	GameWorldTurn
+	// GameClosed is when the game is done, and will shut down
 	GameClosed
 )
 
@@ -172,7 +176,7 @@ mainLoop:
 	}
 }
 
-// Tick runs a single turn of the game engine
+// WorldTick runs a single turn of the game engine
 func (game *Game) WorldTick() {
 	changed := false
 	for _, m := range game.currentDungeon.mobs {

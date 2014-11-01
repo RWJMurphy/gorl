@@ -276,9 +276,8 @@ func (ui *UI) HandleKey(char rune, key termbox.Key) GameState {
 		moved := ui.HandleMovementKey(char, key)
 		if moved {
 			return GameWorldTurn
-		} else {
-			return ui.game.state
 		}
+		return ui.game.state
 	case 0:
 		switch key {
 		case termbox.KeyCtrlC, termbox.KeyEsc:
@@ -286,9 +285,8 @@ func (ui *UI) HandleKey(char rune, key termbox.Key) GameState {
 		case termbox.KeyArrowUp, termbox.KeyArrowRight, termbox.KeyArrowDown, termbox.KeyArrowLeft:
 			if moved := ui.HandleMovementKey(char, key); moved {
 				return GameWorldTurn
-			} else {
-				return ui.game.state
 			}
+			return ui.game.state
 		default:
 			msg := fmt.Sprintf("Unhandled key: %s", string(key))
 			ui.log.Println(msg)

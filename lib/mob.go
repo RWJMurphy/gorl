@@ -11,17 +11,23 @@ type Mob interface {
 	VisionRadius() int
 	Move(Movement)
 	Tick(*Dungeon) bool
+
+	Inventory() []Item
+	AddToInventory(Item) bool
+	RemoveFromInventory(Item) bool
 }
 
 type mob struct {
 	feature
 	visionRadius int
+	inventory []Item
 }
 
 // NewMob creates and returns a new Mob
 func NewMob(name string, char rune) Mob {
 	m := &mob{}
 	m.feature = *NewFeature(name, char).(*feature)
+	m.inventory = make([]Item, 0)
 	return m
 }
 
@@ -45,4 +51,35 @@ func (m *mob) String() string {
 		m.feature,
 		m.visionRadius,
 	)
+}
+
+func (m *mob) LightRadius() int {
+	max := m.feature.LightRadius()
+	for _, i := range m.inventory {
+		if i.LightRadius() > max {
+			max = i.LightRadius()
+		}
+	}
+	return max
+}
+
+func (m *mob) Inventory() []Item {
+	return m.inventory
+}
+
+func (m *mob) AddToInventory(i Item) bool {
+	m.inventory = append(m.inventory, i)
+	return true
+}
+
+func (m *mob) RemoveFromInventory(item Item) bool {
+	for i, inventoryItem := range m.inventory {
+		if inventoryItem == item {
+			copy(m.inventory[i:], m.inventory[i+1:])
+			m.inventory[len(m.inventory)-1] = nil
+			m.inventory = m.inventory[:len(m.inventory)-1]
+			return true
+		}
+	}
+	return false
 }

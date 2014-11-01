@@ -270,35 +270,39 @@ func (ui *UI) PointCameraAt(d *Dungeon, c Coord) {
 // HandleKey handles a termbox.KeyEvent
 func (ui *UI) HandleKey(char rune, key termbox.Key) GameState {
 	switch char {
+	// Quit
 	case 'q':
 		return GameClosed
+	// Move
 	case 'h', 'j', 'k', 'l', 'y', 'u', 'b', 'n':
 		moved := ui.HandleMovementKey(char, key)
 		if moved {
 			return GameWorldTurn
 		}
-		return ui.game.state
 	case 0:
 		switch key {
+		// Quit
 		case termbox.KeyCtrlC, termbox.KeyEsc:
 			return GameClosed
+		// Wait
+		case termbox.KeySpace:
+			return GameWorldTurn
+		// Move
 		case termbox.KeyArrowUp, termbox.KeyArrowRight, termbox.KeyArrowDown, termbox.KeyArrowLeft:
 			if moved := ui.HandleMovementKey(char, key); moved {
 				return GameWorldTurn
 			}
-			return ui.game.state
 		default:
 			msg := fmt.Sprintf("Unhandled key: %s", string(key))
 			ui.log.Println(msg)
 			ui.game.AddMessage(msg)
-			return ui.game.state
 		}
 	default:
 		msg := fmt.Sprintf("Unhandled key: %c", char)
 		ui.log.Println(msg)
 		ui.game.AddMessage(msg)
-		return ui.game.state
 	}
+	return ui.game.state
 }
 
 // Single tile Movement constants

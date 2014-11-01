@@ -67,6 +67,11 @@ func NewGame(log log.Logger) (*Game, error) {
 
 	game.player = NewPlayer()
 	game.player.SetLoc(dungeon.origin)
+
+	torch := NewItem("torch", '!', 1)
+	torch.SetLightRadius(20)
+	game.player.AddToInventory(torch)
+
 	dungeon.AddMob(game.player)
 
 	for i := 0; i < 100; i++ {
@@ -78,18 +83,6 @@ func NewGame(log log.Logger) (*Game, error) {
 		mob.SetColor(termbox.ColorGreen)
 		mob.SetLoc(Coord{x, y})
 		dungeon.AddMob(mob)
-	}
-
-	for i := 0; i < 100; i++ {
-		x, y := rand.Intn(dungeon.width), rand.Intn(dungeon.height)
-		for !dungeon.Tile(x, y).Crossable() {
-			x, y = rand.Intn(dungeon.width), rand.Intn(dungeon.height)
-		}
-		feature := NewFeature("torch", '!')
-		feature.SetLoc(Coord{x, y})
-		feature.SetColor(termbox.ColorRed | termbox.AttrBold)
-		feature.SetLightRadius(20)
-		dungeon.AddFeature(feature)
 	}
 
 	dungeon.ResetFlag(FlagLit | FlagVisible)

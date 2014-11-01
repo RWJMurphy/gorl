@@ -15,6 +15,7 @@ type Mob interface {
 
 	Inventory() []Item
 	AddToInventory(Item) bool
+	DropItem(Item, *Dungeon) bool
 	RemoveFromInventory(Item) bool
 }
 
@@ -77,13 +78,26 @@ func (m *mob) LightRadius() int {
 }
 
 func (m *mob) Inventory() []Item {
-	return m.inventory
+	inv := make([]Item, len(m.inventory))
+	copy(inv, m.inventory)
+	return inv
 }
 
 func (m *mob) AddToInventory(i Item) bool {
 	m.inventory = append(m.inventory, i)
 	return true
 }
+
+func (m *mob) DropItem(item Item, d *Dungeon) bool {
+	if m.RemoveFromInventory(item) {
+		item.SetLoc(m.Loc())
+		d.AddItem(item)
+		return true
+	}
+	m.log.Panicf("%s tried to drop unheld item %s!", m, item)
+	return false
+}
+
 
 func (m *mob) RemoveFromInventory(item Item) bool {
 	for i, inventoryItem := range m.inventory {

@@ -134,8 +134,6 @@ func (camera *CameraWidget) Paint() {
 		loc   Coord
 		out   Coord
 		x, y  int
-		f     Feature
-		ok    bool
 		color termbox.Attribute
 	)
 	ne := Coord{camera.center.x - camera.width/2, camera.center.y - camera.height/2}
@@ -149,11 +147,14 @@ func (camera *CameraWidget) Paint() {
 				color = tile.color
 				if tile.Visible() {
 					camera.ui.PutRuneColor(out.x, out.y, tile.c, color|termbox.AttrBold, termbox.ColorDefault)
-					if f, ok = camera.dungeon.features[loc]; ok {
+					if m, ok := camera.dungeon.mobs[loc]; ok {
+						camera.ui.PutRuneColor(out.x, out.y, m.Char(), m.Color(), termbox.ColorDefault)
+					} else if f, ok := camera.dungeon.features[loc]; ok {
 						camera.ui.PutRuneColor(out.x, out.y, f.Char(), f.Color(), termbox.ColorDefault)
-					}
-					if f, ok = camera.dungeon.mobs[loc]; ok {
-						camera.ui.PutRuneColor(out.x, out.y, f.Char(), f.Color(), termbox.ColorDefault)
+					} else if items, ok := camera.dungeon.items[loc]; ok {
+						for _, i := range items {
+							camera.ui.PutRuneColor(out.x, out.y, i.Char(), i.Color(), termbox.ColorDefault)
+						}
 					}
 				} else {
 					camera.ui.PutRuneColor(out.x, out.y, tile.c, color, termbox.ColorDefault)
@@ -274,29 +275,36 @@ func (ui *UI) PointCameraAt(d *Dungeon, c Coord) {
 }
 
 // HandleKey handles a termbox.KeyEvent
-func (ui *UI) HandleKey(char rune, key termbox.Key) GameState {
+func (ui *UI) HandleKey(char rune, key termbox.Key) (PlayerAction, GameState) {
 	switch char {
 	// Quit
 	case 'q':
-		return GameClosed
+		return ActNone, GameClosed
 	// Move
 	case 'h', 'j', 'k', 'l', 'y', 'u', 'b', 'n':
+		// TODO: move movement handling to Game
 		moved := ui.HandleMovementKey(char, key)
 		if moved {
-			return GameWorldTurn
+			return ActNone, GameWorldTurn
 		}
+	// Drop all
+	case 'D':
+		return ActDropAll, GameWorldTurn
+	case ',', 'g':
+		return ActPickUp, GameWorldTurn
 	case 0:
 		switch key {
 		// Quit
 		case termbox.KeyCtrlC, termbox.KeyEsc:
-			return GameClosed
+			return ActNone, GameClosed
 		// Wait
 		case termbox.KeySpace:
-			return GameWorldTurn
+			return ActWait, GameWorldTurn
 		// Move
 		case termbox.KeyArrowUp, termbox.KeyArrowRight, termbox.KeyArrowDown, termbox.KeyArrowLeft:
+			// TODO: move movement handling to Game
 			if moved := ui.HandleMovementKey(char, key); moved {
-				return GameWorldTurn
+				return ActNone, GameWorldTurn
 			}
 		default:
 			msg := fmt.Sprintf("Unhandled key: %s", string(key))
@@ -308,7 +316,7 @@ func (ui *UI) HandleKey(char rune, key termbox.Key) GameState {
 		ui.log.Println(msg)
 		ui.game.AddMessage(msg)
 	}
-	return ui.game.state
+	return ActNone, ui.game.state
 }
 
 // Single tile Movement constants
@@ -364,25 +372,25 @@ func (ui *UI) HandleMovementKey(char rune, key termbox.Key) bool {
 }
 
 // HandleEvent handles a termbox.Event
-func (ui *UI) HandleEvent(e termbox.Event) GameState {
+func (ui *UI) HandleEvent(e termbox.Event) (PlayerAction, GameState) {
 	switch e.Type {
 	case termbox.EventKey:
 		return ui.HandleKey(e.Ch, e.Key)
 	case termbox.EventResize:
 		ui.dirty = true
-		return ui.game.state
-	default:
-		fallthrough
+		return ActNone, ui.game.state
 	case termbox.EventError:
 		ui.log.Panic(e.Err)
-		return GameInvalidState
+		fallthrough
+	default:
+		return ActNone, GameInvalidState
 	}
 }
 
 // WaitAndHandleInput waits on a termbox.Event, handles it, and repaints the UI if needed.
 // Returns a GameState.
-func (ui *UI) WaitAndHandleInput() GameState {
+func (ui *UI) WaitAndHandleInput() (PlayerAction, GameState) {
 	event := termbox.PollEvent()
-	nextState := ui.HandleEvent(event)
-	return nextState
+	action, nextState := ui.HandleEvent(event)
+	return action, nextState
 }

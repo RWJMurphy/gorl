@@ -88,6 +88,7 @@ type Dungeon struct {
 	origin        Coord
 	tiles         [][]Tile
 	mobs          map[Coord]Mob
+	items         map[Coord][]Item
 	features      map[Coord]Feature
 	log           log.Logger
 }
@@ -108,10 +109,36 @@ func NewDungeon(width, height int, log log.Logger) *Dungeon {
 		Coord{width / 2, height / 2},
 		tiles,
 		make(map[Coord]Mob),
+		make(map[Coord][]Item),
 		make(map[Coord]Feature),
 		log,
 	}
 	return d
+}
+
+// AddItem adds a Item item to the Dungeon.
+func (d *Dungeon) AddItem(item Item) {
+	loc := item.Loc()
+	if _, exists := d.items[loc]; !exists {
+		d.items[loc] = make([]Item, 0)
+	}
+	d.items[loc] = append(d.items[loc], item)
+}
+
+// DeleteItem removes Item item from the Dungeon.
+func (d *Dungeon) DeleteItem(item Item) {
+	loc := item.Loc()
+	if itemList, anyItems := d.items[loc]; anyItems {
+		for i, stackItem := range itemList {
+			if stackItem == item {
+				copy(itemList[i:], itemList[i+1:])
+				itemList[len(itemList)-1] = nil
+				d.items[loc] = itemList[:len(itemList)-1]
+				return
+			}
+		}
+	}
+	d.log.Panicf("Tried to delete non-existent item: %s", item)
 }
 
 // AddFeature adds a Feature feature to the Dungeon.
@@ -124,6 +151,15 @@ func (d *Dungeon) AddFeature(feature Feature) {
 		)
 	}
 	d.features[feature.Loc()] = feature
+}
+
+// DeleteFeature removes Feature feature from the Dungeon.
+func (d *Dungeon) DeleteFeature(feature Feature) {
+	if _, exists := d.features[feature.Loc()]; exists {
+		delete(d.features, feature.Loc())
+	} else {
+		d.log.Panicf("Tried to delete non-existent feature: %s", feature)
+	}
 }
 
 // AddMob adds Mob mob to the Dungeon.
@@ -165,9 +201,11 @@ func (d *Dungeon) MoveMob(mob Mob, move Movement) bool {
 }
 
 func (d *Dungeon) Mobs() []Mob {
-	mobs := make([]Mob, 0, len(d.mobs))
+	mobs := make([]Mob, len(d.mobs))
+	i := 0
 	for _, mob := range d.mobs {
-		mobs = append(mobs, mob)
+		mobs[i] = mob
+		i++
 	}
 	return mobs
 }
@@ -179,26 +217,42 @@ func (d *Dungeon) CalculateLighting() {
 	var radius int
 	signal := make(chan bool)
 	goroutineCount := 0
+
+	lights := make(map[Coord][]Feature)
 	for loc, mob := range d.mobs {
-		radius = mob.LightRadius()
-		if radius > 0 {
-			goroutineCount++
-			go func(loc Coord, radius int) {
-				d.FlagByLineOfSight(loc, radius, FlagLit)
-				signal <- true
-			}(loc, mob.LightRadius())
+		if _, ok := lights[loc]; !ok {
+			lights[loc] = make([]Feature, 0)
 		}
+		lights[loc] = append(lights[loc], mob)
 	}
 	for loc, feature := range d.features {
-		radius = feature.LightRadius()
-		if radius > 0 {
-			goroutineCount++
-			go func(loc Coord, radius int) {
-				d.FlagByLineOfSight(loc, radius, FlagLit)
-				signal <- true
-			}(loc, feature.LightRadius())
+		if _, ok := lights[loc]; !ok {
+			lights[loc] = make([]Feature, 0)
+		}
+		lights[loc] = append(lights[loc], feature)
+	}
+	for loc, items := range d.items {
+		if _, ok := lights[loc]; !ok {
+			lights[loc] = make([]Feature, 0)
+		}
+		for _, item := range items {
+			lights[loc] = append(lights[loc], item)
 		}
 	}
+
+	for loc, features := range lights {
+		for _, feature := range features {
+			radius = feature.LightRadius()
+			if radius > 0 {
+				goroutineCount++
+				go func(loc Coord, radius int) {
+					d.FlagByLineOfSight(loc, radius, FlagLit)
+					signal <- true
+				}(loc, feature.LightRadius())
+			}
+		}
+	}
+
 	for i := 0; i < goroutineCount; i++ {
 		<-signal
 	}

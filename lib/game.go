@@ -9,12 +9,6 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-// Default size for new dungeons
-const (
-	DefaultDungeonWidth  = 512
-	DefaultDungeonHeight = 512
-)
-
 // GameState represents the state of the Game engine
 type GameState int
 
@@ -28,6 +22,16 @@ const (
 	// GameClosed is when the game is done, and will shut down
 	GameClosed
 )
+
+type PlayerAction uint
+
+const (
+	ActNone PlayerAction = iota
+	ActWait
+	ActDropAll
+	ActPickUp
+)
+
 
 func (s GameState) String() string {
 	switch s {
@@ -64,7 +68,7 @@ func NewGame(log log.Logger) (*Game, error) {
 	game.messages = make([]string, 0, 10)
 	game.turn = 0
 
-	dungeon := GenerateDungeon(DefaultDungeonWidth, DefaultDungeonHeight, log)
+	dungeon := GenerateDungeon(log)
 	game.dungeons = make([]*Dungeon, 0, 10)
 	game.dungeons = append(game.dungeons, dungeon)
 
@@ -77,7 +81,7 @@ func NewGame(log log.Logger) (*Game, error) {
 
 	dungeon.AddMob(game.player)
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 10; i++ {
 		x, y := rand.Intn(dungeon.width), rand.Intn(dungeon.height)
 		_, mobExists := dungeon.mobs[Coord{x, y}]
 		for !dungeon.Tile(x, y).Crossable() || mobExists {
@@ -165,17 +169,45 @@ func (game *Game) Run() {
 
 // MainLoop is the Game's main loop. Ticks the UI until it closes.
 func (game *Game) MainLoop() {
+	action := ActNone
+	nextState := game.state
+
 	game.ui.Paint()
 	game.log.Println("Entering main loop")
 mainLoop:
 	for {
 		game.log.Printf("game.state = %s", game.state)
-		switch state := game.state; state {
+		switch game.state {
 		case GameWorldTurn:
 			game.WorldTick()
-			game.state = GamePlayerTurn
+			nextState = GamePlayerTurn
 		case GamePlayerTurn:
-			game.state = game.ui.WaitAndHandleInput()
+			action, nextState = game.ui.WaitAndHandleInput()
+
+			switch action {
+			case ActWait:
+				nextState = GameWorldTurn
+			case ActDropAll:
+				for _, item := range game.player.Inventory() {
+					game.player.DropItem(item, game.currentDungeon)
+					game.AddMessage(fmt.Sprintf("Dropped %s", item.Name()))
+				}
+			case ActPickUp:
+				if items, ok := game.currentDungeon.items[game.player.Loc()]; ok {
+					for _, item := range items {
+						game.currentDungeon.DeleteItem(item)
+						game.player.AddToInventory(item)
+						game.AddMessage(fmt.Sprintf("Picked up %s", item.Name()))
+					}
+				} else {
+					game.AddMessage("Nothing to pick up.")
+					nextState = game.state
+				}
+			case ActNone:
+				fallthrough
+			default:
+			}
+			game.ui.Paint()
 		case GameClosed:
 			break mainLoop
 		case GameInvalidState:
@@ -183,7 +215,7 @@ mainLoop:
 		default:
 			log.Panicf("Bad game state: %s", game.state)
 		}
-		game.ui.Paint()
+		game.state = nextState
 	}
 }
 

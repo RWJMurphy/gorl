@@ -64,7 +64,7 @@ func NewGame(log log.Logger) (*Game, error) {
 	game.messages = make([]string, 0, 10)
 	game.turn = 0
 
-	dungeon := NewDungeon(DefaultDungeonWidth, DefaultDungeonHeight, log)
+	dungeon := GenerateDungeon(DefaultDungeonWidth, DefaultDungeonHeight, log)
 	game.dungeons = make([]*Dungeon, 0, 10)
 	game.dungeons = append(game.dungeons, dungeon)
 

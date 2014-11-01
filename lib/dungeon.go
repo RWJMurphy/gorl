@@ -3,7 +3,6 @@ package gorl
 import (
 	"fmt"
 	"log"
-	"math/rand"
 	"strings"
 
 	"github.com/nsf/termbox-go"
@@ -95,7 +94,7 @@ type Dungeon struct {
 
 // NewDungeon creates and returns a new Dungeon of the specified width and height.
 //
-// The dungeon is populated with floor tiles, and random walls tiles.
+// The dungeon's tiles are not populated.
 func NewDungeon(width, height int, log log.Logger) *Dungeon {
 	size := width * height
 	tiles := make([][]Tile, height)
@@ -104,7 +103,7 @@ func NewDungeon(width, height int, log log.Logger) *Dungeon {
 		tiles[i], tilesRaw = tilesRaw[:width], tilesRaw[width:]
 	}
 
-	m := &Dungeon{
+	d := &Dungeon{
 		width, height,
 		Coord{width / 2, height / 2},
 		tiles,
@@ -112,21 +111,7 @@ func NewDungeon(width, height int, log log.Logger) *Dungeon {
 		make(map[Coord]Feature),
 		log,
 	}
-
-	var tile Tile
-	wallChance := 0.02
-	for x := 0; x < width; x++ {
-		for y := 0; y < width; y++ {
-			if rand.Float64() <= wallChance {
-				tile = NewTile('#', termbox.ColorYellow, Flag(0)|FlagBlocksLight)
-			} else {
-				tile = NewTile('.', termbox.ColorWhite, Flag(0)|FlagCrossable)
-			}
-			m.tiles[y][x] = tile
-		}
-	}
-
-	return m
+	return d
 }
 
 // AddFeature adds a Feature feature to the Dungeon.

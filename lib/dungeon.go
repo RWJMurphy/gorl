@@ -109,7 +109,7 @@ func NewDungeon(width, height int, log log.Logger) *Dungeon {
 	}
 
 	var tile Tile
-	wallChance := 0.05
+	wallChance := 0.02
 	for x := 0; x < width; x++ {
 		for y := 0; y < width; y++ {
 			if rand.Float64() <= wallChance {
@@ -186,15 +186,31 @@ func (d *Dungeon) Mobs() []Mob {
 // FlagLit on any tiles within the Feature's LightRadius that have a clear line
 // sight from the Feature
 func (d *Dungeon) CalculateLighting() {
+	var radius int
+	signal := make(chan bool)
+	goroutineCount := 0
 	for loc, mob := range d.mobs {
-		if mob.LightRadius() > 0 {
-			d.FlagByLineOfSight(loc, mob.LightRadius(), FlagLit)
+		radius = mob.LightRadius()
+		if radius > 0 {
+			goroutineCount++
+			go func(loc Coord, radius int){
+				d.FlagByLineOfSight(loc, radius, FlagLit)
+				signal <- true
+			}(loc, mob.LightRadius())
 		}
 	}
 	for loc, feature := range d.features {
-		if feature.LightRadius() > 0 {
-			d.FlagByLineOfSight(loc, feature.LightRadius(), FlagLit)
+		radius = feature.LightRadius()
+		if radius > 0 {
+			goroutineCount++
+			go func(loc Coord, radius int){
+				d.FlagByLineOfSight(loc, radius, FlagLit)
+				signal <- true
+			}(loc, feature.LightRadius())
 		}
+	}
+	for i := 0; i < goroutineCount; i++ {
+		<-signal
 	}
 }
 
@@ -229,17 +245,24 @@ func (d *Dungeon) FlagByLineOfSight(origin Coord, radius int, flag Flag) {
 		return
 	}
 	d.tiles[origin.y][origin.x].flags |= flag
+	signal := make(chan bool)
 	for octant := 0; octant < 8; octant++ {
-		d.castFlag(
-			origin.x, origin.y, 1,
-			1.0, 0.0,
-			radius,
-			octantMultiplier[0][octant],
-			octantMultiplier[1][octant],
-			octantMultiplier[2][octant],
-			octantMultiplier[3][octant],
-			flag,
-		)
+		go func(origin Coord, radius int, flag Flag, octant int){
+			d.castFlag(
+				origin.x, origin.y, 1,
+				1.0, 0.0,
+				radius,
+				octantMultiplier[0][octant],
+				octantMultiplier[1][octant],
+				octantMultiplier[2][octant],
+				octantMultiplier[3][octant],
+				flag,
+			)
+			signal <- true
+		}(origin, radius, flag, octant)
+	}
+	for octant := 0; octant < 8; octant++ {
+		<- signal
 	}
 }
 

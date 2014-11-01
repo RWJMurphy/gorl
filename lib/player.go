@@ -15,7 +15,7 @@ const (
 	// PlayerVisionRadius sets how far the player can see
 	PlayerVisionRadius = 100
 	// PlayerLightRadius sets how far the player emits light
-	PlayerLightRadius = 2
+	PlayerLightRadius = 0
 )
 
 // NewPlayer creates and returns a new Player

@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"time"
 
 	"github.com/nsf/termbox-go"
 )
 
 // Default size for new dungeons
 const (
-	DefaultDungeonWidth  = 256
-	DefaultDungeonHeight = 256
+	DefaultDungeonWidth  = 512
+	DefaultDungeonHeight = 512
 )
 
 // GameState represents the state of the Game engine
@@ -70,7 +71,7 @@ func NewGame(log log.Logger) (*Game, error) {
 	game.player = NewPlayer(game.log, dungeon)
 	game.player.SetLoc(dungeon.origin)
 
-	torch := NewItem("torch", '!', 1)
+	torch := NewItem("bright torch", '!', 1)
 	torch.SetLightRadius(20)
 	game.player.AddToInventory(torch)
 
@@ -78,12 +79,19 @@ func NewGame(log log.Logger) (*Game, error) {
 
 	for i := 0; i < 100; i++ {
 		x, y := rand.Intn(dungeon.width), rand.Intn(dungeon.height)
-		for !dungeon.Tile(x, y).Crossable() {
+		_, mobExists := dungeon.mobs[Coord{x, y}]
+		for !dungeon.Tile(x, y).Crossable() || mobExists {
 			x, y = rand.Intn(dungeon.width), rand.Intn(dungeon.height)
+			_, mobExists = dungeon.mobs[Coord{x, y}]
 		}
 		mob := NewMob(fmt.Sprintf("orc #%d", i), 'o', game.log, dungeon)
 		mob.SetColor(termbox.ColorGreen)
 		mob.SetLoc(Coord{x, y})
+
+		torch := NewItem("torch", '!', 1)
+		torch.SetLightRadius(10)
+		mob.AddToInventory(torch)
+
 		dungeon.AddMob(mob)
 	}
 
@@ -173,6 +181,7 @@ mainLoop:
 
 // WorldTick runs a single turn of the game engine
 func (game *Game) WorldTick() {
+	tickStartTime := time.Now()
 	game.turn++
 	game.log.Printf("Game tick: %d", game.turn)
 	game.log.Printf("There are %d mobs", len(game.currentDungeon.mobs))
@@ -183,6 +192,10 @@ func (game *Game) WorldTick() {
 	if changed {
 		game.ui.dirty = true
 	}
+	game.currentDungeon.ResetFlag(FlagLit)
+	game.currentDungeon.CalculateLighting()
+	tickRunTime := time.Now().Sub(tickStartTime)
+	game.log.Printf("Tick took %v to run", tickRunTime)
 }
 
 // Close cleans up after a Game.

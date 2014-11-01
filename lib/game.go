@@ -32,6 +32,20 @@ const (
 	ActPickUp
 )
 
+func (a PlayerAction) String() string {
+	switch a {
+	case ActNone:
+		return "ActNone"
+	case ActWait:
+		return "ActWait"
+	case ActDropAll:
+		return "ActDropAll"
+	case ActPickUp:
+		return "ActPickUp"
+	default:
+		return fmt.Sprintf("PlayerAction(%d)", a)
+	}
+}
 
 func (s GameState) String() string {
 	switch s {
@@ -204,10 +218,9 @@ mainLoop:
 					nextState = game.state
 				}
 			case ActNone:
-				fallthrough
 			default:
+				log.Panicf("Bad action: %s", action)
 			}
-			game.ui.Paint()
 		case GameClosed:
 			break mainLoop
 		case GameInvalidState:
@@ -215,6 +228,7 @@ mainLoop:
 		default:
 			log.Panicf("Bad game state: %s", game.state)
 		}
+		game.ui.Paint()
 		game.state = nextState
 	}
 }

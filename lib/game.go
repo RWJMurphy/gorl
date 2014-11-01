@@ -51,6 +51,7 @@ type Game struct {
 	dungeons       []*Dungeon
 	currentDungeon *Dungeon
 	state          GameState
+	turn           uint
 	log            log.Logger
 }
 
@@ -60,12 +61,13 @@ func NewGame(log log.Logger) (*Game, error) {
 	game := &Game{}
 	game.log = log
 	game.messages = make([]string, 0, 10)
+	game.turn = 0
 
 	dungeon := NewDungeon(DefaultDungeonWidth, DefaultDungeonHeight, log)
 	game.dungeons = make([]*Dungeon, 0, 10)
 	game.dungeons = append(game.dungeons, dungeon)
 
-	game.player = NewPlayer()
+	game.player = NewPlayer(game.log, dungeon)
 	game.player.SetLoc(dungeon.origin)
 
 	torch := NewItem("torch", '!', 1)
@@ -79,7 +81,7 @@ func NewGame(log log.Logger) (*Game, error) {
 		for !dungeon.Tile(x, y).Crossable() {
 			x, y = rand.Intn(dungeon.width), rand.Intn(dungeon.height)
 		}
-		mob := NewMob("orc", 'o')
+		mob := NewMob(fmt.Sprintf("orc #%d", i), 'o', game.log, dungeon)
 		mob.SetColor(termbox.ColorGreen)
 		mob.SetLoc(Coord{x, y})
 		dungeon.AddMob(mob)
@@ -151,7 +153,7 @@ func (game *Game) MainLoop() {
 	game.log.Println("Entering main loop")
 mainLoop:
 	for {
-		game.log.Printf("game.state = %s\n", game.state)
+		game.log.Printf("game.state = %s", game.state)
 		switch state := game.state; state {
 		case GameWorldTurn:
 			game.WorldTick()
@@ -163,7 +165,7 @@ mainLoop:
 		case GameInvalidState:
 			fallthrough
 		default:
-			log.Panicf("Bad game state: %s\n", game.state)
+			log.Panicf("Bad game state: %s", game.state)
 		}
 		game.ui.Paint()
 	}
@@ -171,9 +173,12 @@ mainLoop:
 
 // WorldTick runs a single turn of the game engine
 func (game *Game) WorldTick() {
+	game.turn++
+	game.log.Printf("Game tick: %d", game.turn)
+	game.log.Printf("There are %d mobs", len(game.currentDungeon.mobs))
 	changed := false
-	for _, m := range game.currentDungeon.mobs {
-		changed = m.Tick(game.currentDungeon) || changed
+	for _, m := range game.currentDungeon.Mobs() {
+		changed = m.Tick(game.turn) || changed
 	}
 	if changed {
 		game.ui.dirty = true

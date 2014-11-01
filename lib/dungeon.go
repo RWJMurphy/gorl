@@ -128,7 +128,7 @@ func NewDungeon(width, height int, log log.Logger) *Dungeon {
 func (d *Dungeon) AddFeature(feature Feature) {
 	if otherFeature, exists := d.features[feature.Loc()]; exists {
 		d.log.Panicf(
-			"Tried to put two features on same location: %s, %s\n",
+			"Tried to put two features on same location: %s, %s",
 			feature,
 			otherFeature,
 		)
@@ -140,7 +140,7 @@ func (d *Dungeon) AddFeature(feature Feature) {
 func (d *Dungeon) AddMob(mob Mob) {
 	if otherMob, exists := d.mobs[mob.Loc()]; exists {
 		d.log.Panicf(
-			"Tried to put two mobs on same location: %s, %s\n",
+			"Tried to put two mobs on same location: %s, %s",
 			mob,
 			otherMob,
 		)
@@ -153,7 +153,7 @@ func (d *Dungeon) DeleteMob(mob Mob) {
 	if _, exists := d.mobs[mob.Loc()]; exists {
 		delete(d.mobs, mob.Loc())
 	} else {
-		d.log.Panicf("Tried to delete non-existent mob: %s\n", mob)
+		d.log.Panicf("Tried to delete non-existent mob: %s", mob)
 	}
 }
 
@@ -172,6 +172,14 @@ func (d *Dungeon) MoveMob(mob Mob, move Movement) bool {
 	mob.Move(move)
 	d.AddMob(mob)
 	return true
+}
+
+func (d *Dungeon) Mobs() []Mob {
+	mobs := make([]Mob, 0, len(d.mobs))
+	for _, mob := range d.mobs {
+		mobs = append(mobs, mob)
+	}
+	return mobs
 }
 
 // CalculateLighting ranges over each Mob and Feature in the Dungeon, setting

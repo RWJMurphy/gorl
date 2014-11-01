@@ -349,10 +349,10 @@ func (ui *UI) HandleMovementKey(char rune, key termbox.Key) bool {
 		case termbox.KeyArrowLeft:
 			movement = MoveWest
 		default:
-			ui.log.Panicf("Not a movement key: %s\n", string(key))
+			ui.log.Panicf("Not a movement key: %s", string(key))
 		}
 	default:
-		ui.log.Panicf("Not a movement key: %c\n", char)
+		ui.log.Panicf("Not a movement key: %c", char)
 	}
 	return ui.game.Move(movement)
 }

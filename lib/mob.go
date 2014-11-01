@@ -1,6 +1,7 @@
 package gorl
 
 import (
+	"log"
 	"fmt"
 	"math/rand"
 )
@@ -10,7 +11,7 @@ type Mob interface {
 	Feature
 	VisionRadius() int
 	Move(Movement)
-	Tick(*Dungeon) bool
+	Tick(uint) bool
 
 	Inventory() []Item
 	AddToInventory(Item) bool
@@ -21,19 +22,30 @@ type mob struct {
 	feature
 	visionRadius int
 	inventory []Item
+	dungeon *Dungeon
+	lastTicked uint
+
+	log log.Logger
 }
 
 // NewMob creates and returns a new Mob
-func NewMob(name string, char rune) Mob {
+func NewMob(name string, char rune, log log.Logger, dungeon *Dungeon) Mob {
 	m := &mob{}
 	m.feature = *NewFeature(name, char).(*feature)
 	m.inventory = make([]Item, 0)
+	m.log = log
+	m.dungeon = dungeon
 	return m
 }
 
-func (m *mob) Tick(d *Dungeon) bool {
+func (m *mob) Tick(turn uint) bool {
+	if m.lastTicked != turn-1 {
+		m.log.Panicf("%s out of sync! Last ticked: %d, ticking: %d", m, m.lastTicked, turn)
+	}
+	m.lastTicked = turn
 	dx, dy := rand.Intn(3)-1, rand.Intn(3)-1
-	return d.MoveMob(m, Movement{dx, dy})
+	// m.log.Printf("%s moving %d, %d", m, dx, dy)
+	return m.dungeon.MoveMob(m, Movement{dx, dy})
 }
 
 func (m *mob) VisionRadius() int {
@@ -47,8 +59,9 @@ func (m *mob) Move(movement Movement) {
 
 func (m *mob) String() string {
 	return fmt.Sprintf(
-		"<Mob feature:%s, visionRadius:%d>",
-		m.feature,
+		"<Mob@%p feature:%s, visionRadius:%d>",
+		&m,
+		m.feature.String(),
 		m.visionRadius,
 	)
 }

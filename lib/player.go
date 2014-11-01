@@ -1,5 +1,7 @@
 package gorl
 
+import "log"
+
 // Player represents the player -- it's basically a special form of Mob
 type Player interface {
 	Mob
@@ -17,15 +19,16 @@ const (
 )
 
 // NewPlayer creates and returns a new Player
-func NewPlayer() Player {
+func NewPlayer(log log.Logger, dungeon *Dungeon) Player {
 	p := &player{
-		*NewMob("Player", '@').(*mob),
+		*NewMob("Player", '@', log, dungeon).(*mob),
 	}
 	p.mob.visionRadius = PlayerVisionRadius
 	p.mob.lightRadius = PlayerLightRadius
 	return p
 }
 
-func (p *player) Tick(d *Dungeon) bool {
+func (p *player) Tick(turn uint) bool {
+	p.lastTicked = turn
 	return false
 }

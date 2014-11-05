@@ -87,6 +87,20 @@ type Dungeon struct {
 	width, height int
 	origin        Coord
 	tiles         [][]Tile
+	// Would it be faster / cleaner to store these as a single
+	// features map[Coord]FeatureGroup
+	// type FeatureGroup struct {
+	//	mob Mob
+	//	items []Item
+	//	feature Feature
+	// }
+	// ?
+	// Cons: extra check per populated coord when looping over a single
+	// 	feature class
+	// Pros: simpler to loop over all features to check e.g. blocking, do
+	//	lighting and fov calculations, etc.
+	//	feels simpler to maintain - single point of extensibility, can
+	//	refactor checks like IsBlocking() to methods on FeatureGroup
 	mobs          map[Coord]Mob
 	items         map[Coord][]Item
 	features      map[Coord]Feature

@@ -82,28 +82,82 @@ func NewTile(c rune, color termbox.Attribute, flags Flag) Tile {
 // otherwise not considered "valid".
 var InvalidTile = Tile{' ', termbox.ColorBlack, Flag(0) | FlagBlocksLight}
 
+type FeatureGroup struct {
+	mob     Mob
+	items   []Item
+	feature Feature
+}
+
+func (f *FeatureGroup) Each() []Feature {
+	fs := make([]Feature, 0)
+	if f.mob != nil {
+		fs = append(fs, f.mob)
+	}
+	if f.feature != nil {
+		fs = append(fs, f.feature)
+	}
+	if len(f.items) > 0 {
+		for _, f := range f.items {
+			fs = append(fs, f)
+		}
+	}
+	return fs
+}
+
+func (f *FeatureGroup) Crossable() bool {
+	for _, f := range f.Each() {
+		if f.Flags() & FlagCrossable == 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func (f *FeatureGroup) AddItem(i Item) {
+	if f.items == nil {
+		f.items = make([]Item, 1)
+	}
+	f.items = append(f.items, i)
+}
+
+func (f *FeatureGroup) HasItem(target Item) bool {
+	for _, item := range f.items {
+		if item == target {
+			return true
+		}
+	}
+	return false
+}
+
+func (f *FeatureGroup) DeleteItem(target Item) bool {
+	for i, item := range f.items {
+		if item == target {
+			copy(f.items[i:], f.items[i+1:])
+			f.items[len(f.items)-1] = nil
+			f.items = f.items[:len(f.items)-1]
+			return true
+		}
+	}
+	return false
+}
+
+func (f *FeatureGroup) LightRadius() int {
+	var max, rad int
+	for _, feature := range f.Each() {
+		rad = feature.LightRadius()
+		if rad > max {
+			max = rad
+		}
+	}
+	return max
+}
+
 // Dungeon represents a level of the game.
 type Dungeon struct {
 	width, height int
 	origin        Coord
 	tiles         [][]Tile
-	// Would it be faster / cleaner to store these as a single
-	// features map[Coord]FeatureGroup
-	// type FeatureGroup struct {
-	//	mob Mob
-	//	items []Item
-	//	feature Feature
-	// }
-	// ?
-	// Cons: extra check per populated coord when looping over a single
-	// 	feature class
-	// Pros: simpler to loop over all features to check e.g. blocking, do
-	//	lighting and fov calculations, etc.
-	//	feels simpler to maintain - single point of extensibility, can
-	//	refactor checks like IsBlocking() to methods on FeatureGroup
-	mobs          map[Coord]Mob
-	items         map[Coord][]Item
-	features      map[Coord]Feature
+	features      map[Coord]*FeatureGroup
 	log           log.Logger
 }
 
@@ -122,55 +176,58 @@ func NewDungeon(width, height int, log log.Logger) *Dungeon {
 		width, height,
 		Coord{width / 2, height / 2},
 		tiles,
-		make(map[Coord]Mob),
-		make(map[Coord][]Item),
-		make(map[Coord]Feature),
+		make(map[Coord]*FeatureGroup),
 		log,
 	}
 	return d
 }
 
+func (d *Dungeon) FeatureGroup(loc Coord) *FeatureGroup {
+	if _, exists := d.features[loc]; !exists {
+		d.features[loc] = &FeatureGroup{
+			nil,
+			make([]Item, 0),
+			nil,
+		}
+	}
+	return d.features[loc]
+}
+
 // AddItem adds a Item item to the Dungeon.
 func (d *Dungeon) AddItem(item Item) {
 	loc := item.Loc()
-	if _, exists := d.items[loc]; !exists {
-		d.items[loc] = make([]Item, 0)
-	}
-	d.items[loc] = append(d.items[loc], item)
+	d.FeatureGroup(loc).AddItem(item)
 }
 
 // DeleteItem removes Item item from the Dungeon.
 func (d *Dungeon) DeleteItem(item Item) {
 	loc := item.Loc()
-	if itemList, anyItems := d.items[loc]; anyItems {
-		for i, stackItem := range itemList {
-			if stackItem == item {
-				copy(itemList[i:], itemList[i+1:])
-				itemList[len(itemList)-1] = nil
-				d.items[loc] = itemList[:len(itemList)-1]
-				return
-			}
-		}
+	f := d.features[loc]
+	if f == nil || !f.DeleteItem(item) {
+		d.log.Panicf("Tried to delete non-existent item: %s", item)
 	}
-	d.log.Panicf("Tried to delete non-existent item: %s", item)
 }
 
 // AddFeature adds a Feature feature to the Dungeon.
 func (d *Dungeon) AddFeature(feature Feature) {
-	if otherFeature, exists := d.features[feature.Loc()]; exists {
+	loc := feature.Loc()
+	fg := d.FeatureGroup(loc)
+	if fg.feature != nil {
 		d.log.Panicf(
 			"Tried to put two features on same location: %s, %s",
 			feature,
-			otherFeature,
+			fg.feature,
 		)
 	}
-	d.features[feature.Loc()] = feature
+	fg.feature = feature
 }
 
 // DeleteFeature removes Feature feature from the Dungeon.
 func (d *Dungeon) DeleteFeature(feature Feature) {
-	if _, exists := d.features[feature.Loc()]; exists {
-		delete(d.features, feature.Loc())
+	loc := feature.Loc()
+	fg := d.FeatureGroup(loc)
+	if fg.feature == feature {
+		fg.feature = nil
 	} else {
 		d.log.Panicf("Tried to delete non-existent feature: %s", feature)
 	}
@@ -178,20 +235,24 @@ func (d *Dungeon) DeleteFeature(feature Feature) {
 
 // AddMob adds Mob mob to the Dungeon.
 func (d *Dungeon) AddMob(mob Mob) {
-	if otherMob, exists := d.mobs[mob.Loc()]; exists {
+	loc := mob.Loc()
+	fg := d.FeatureGroup(loc)
+	if fg.mob != nil {
 		d.log.Panicf(
 			"Tried to put two mobs on same location: %s, %s",
 			mob,
-			otherMob,
+			fg.mob,
 		)
 	}
-	d.mobs[mob.Loc()] = mob
+	fg.mob = mob
 }
 
 // DeleteMob removes Mob mob from the Dungeon.
 func (d *Dungeon) DeleteMob(mob Mob) {
-	if _, exists := d.mobs[mob.Loc()]; exists {
-		delete(d.mobs, mob.Loc())
+	loc := mob.Loc()
+	fg := d.FeatureGroup(loc)
+	if fg.mob == mob {
+		fg.mob = nil
 	} else {
 		d.log.Panicf("Tried to delete non-existent mob: %s", mob)
 	}
@@ -201,8 +262,7 @@ func (d *Dungeon) DeleteMob(mob Mob) {
 // successful and false otherwise.
 func (d *Dungeon) MoveMob(mob Mob, move Movement) bool {
 	dest := mob.Loc().Plus(move)
-	_, blocked := d.mobs[dest]
-	if blocked {
+	if !d.FeatureGroup(dest).Crossable() {
 		return false
 	}
 	if !d.Tile(dest.x, dest.y).Crossable() {
@@ -215,13 +275,13 @@ func (d *Dungeon) MoveMob(mob Mob, move Movement) bool {
 }
 
 func (d *Dungeon) Mobs() []Mob {
-	mobs := make([]Mob, len(d.mobs))
-	i := 0
-	for _, mob := range d.mobs {
-		mobs[i] = mob
-		i++
+	mobs := make([]Mob, 0)
+	for _, fg := range d.features {
+		if fg.mob != nil {
+			mobs = append(mobs, fg.mob)
+		}
 	}
-	return mobs
+	return mobs[:len(mobs)]
 }
 
 // CalculateLighting ranges over each Mob and Feature in the Dungeon, setting
@@ -232,38 +292,14 @@ func (d *Dungeon) CalculateLighting() {
 	signal := make(chan bool)
 	goroutineCount := 0
 
-	lights := make(map[Coord][]Feature)
-	for loc, mob := range d.mobs {
-		if _, ok := lights[loc]; !ok {
-			lights[loc] = make([]Feature, 0)
-		}
-		lights[loc] = append(lights[loc], mob)
-	}
-	for loc, feature := range d.features {
-		if _, ok := lights[loc]; !ok {
-			lights[loc] = make([]Feature, 0)
-		}
-		lights[loc] = append(lights[loc], feature)
-	}
-	for loc, items := range d.items {
-		if _, ok := lights[loc]; !ok {
-			lights[loc] = make([]Feature, 0)
-		}
-		for _, item := range items {
-			lights[loc] = append(lights[loc], item)
-		}
-	}
-
-	for loc, features := range lights {
-		for _, feature := range features {
-			radius = feature.LightRadius()
-			if radius > 0 {
-				goroutineCount++
-				go func(loc Coord, radius int) {
-					d.FlagByLineOfSight(loc, radius, FlagLit)
-					signal <- true
-				}(loc, feature.LightRadius())
-			}
+	for loc, features := range d.features {
+		radius = features.LightRadius()
+		if radius > 0 {
+			goroutineCount++
+			go func(loc Coord, radius int) {
+				d.FlagByLineOfSight(loc, radius, FlagLit)
+				signal <- true
+			}(loc, radius)
 		}
 	}
 

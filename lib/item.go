@@ -16,6 +16,7 @@ func NewItem(name string, char rune, weight int) Item {
 		*NewFeature(name, char).(*feature),
 		weight,
 	}
+	i.flags |= FlagCrossable
 	return i
 }
 

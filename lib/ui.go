@@ -134,6 +134,7 @@ func (camera *CameraWidget) Paint() {
 		loc   Coord
 		out   Coord
 		x, y  int
+		char  rune
 		color termbox.Attribute
 	)
 	ne := Coord{camera.center.x - camera.width/2, camera.center.y - camera.height/2}
@@ -144,20 +145,24 @@ func (camera *CameraWidget) Paint() {
 			out = Coord{camera.x + x, camera.y + y}
 			tile = camera.dungeon.Tile(loc.x, loc.y)
 			if tile.Seen() || tile.Visible() {
-				color = tile.color
 				if tile.Visible() {
-					camera.ui.PutRuneColor(out.x, out.y, tile.c, color|termbox.AttrBold, termbox.ColorDefault)
-					if m, ok := camera.dungeon.mobs[loc]; ok {
-						camera.ui.PutRuneColor(out.x, out.y, m.Char(), m.Color(), termbox.ColorDefault)
-					} else if f, ok := camera.dungeon.features[loc]; ok {
-						camera.ui.PutRuneColor(out.x, out.y, f.Char(), f.Color(), termbox.ColorDefault)
-					} else if items, ok := camera.dungeon.items[loc]; ok {
-						for _, i := range items {
-							camera.ui.PutRuneColor(out.x, out.y, i.Char(), i.Color(), termbox.ColorDefault)
-						}
+					fg := camera.dungeon.FeatureGroup(loc)
+					if fg.mob != nil {
+						char = fg.mob.Char()
+						color = fg.mob.Color()
+					} else if fg.feature != nil {
+						char = fg.feature.Char()
+						color = fg.feature.Color()
+					} else if len(fg.items) > 0 {
+						char = fg.items[len(fg.items)-1].Char()
+						color = fg.items[len(fg.items)-1].Color()
+					} else {
+						char = tile.c
+						color = tile.color|termbox.AttrBold
 					}
+					camera.ui.PutRuneColor(out.x, out.y, char, color, termbox.ColorDefault)
 				} else {
-					camera.ui.PutRuneColor(out.x, out.y, tile.c, color, termbox.ColorDefault)
+					camera.ui.PutRuneColor(out.x, out.y, tile.c, tile.color, termbox.ColorDefault)
 				}
 			}
 		}

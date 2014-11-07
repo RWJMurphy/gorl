@@ -97,10 +97,8 @@ func NewGame(log log.Logger) (*Game, error) {
 
 	for i := 0; i < 10; i++ {
 		x, y := rand.Intn(dungeon.width), rand.Intn(dungeon.height)
-		_, mobExists := dungeon.mobs[Coord{x, y}]
-		for !dungeon.Tile(x, y).Crossable() || mobExists {
+		for !(dungeon.Tile(x, y).Crossable() && dungeon.FeatureGroup(Coord{x, y}).Crossable()) {
 			x, y = rand.Intn(dungeon.width), rand.Intn(dungeon.height)
-			_, mobExists = dungeon.mobs[Coord{x, y}]
 		}
 		mob := NewMob(fmt.Sprintf("orc #%d", i), 'o', game.log, dungeon)
 		mob.SetColor(termbox.ColorGreen)
@@ -207,8 +205,9 @@ mainLoop:
 					game.AddMessage(fmt.Sprintf("Dropped %s", item.Name()))
 				}
 			case ActPickUp:
-				if items, ok := game.currentDungeon.items[game.player.Loc()]; ok {
-					for _, item := range items {
+				fg := game.currentDungeon.FeatureGroup(game.player.Loc())
+				if len(fg.items) > 0 {
+					for _, item := range fg.items {
 						game.currentDungeon.DeleteItem(item)
 						game.player.AddToInventory(item)
 						game.AddMessage(fmt.Sprintf("Picked up %s", item.Name()))
@@ -238,7 +237,6 @@ func (game *Game) WorldTick() {
 	tickStartTime := time.Now()
 	game.turn++
 	game.log.Printf("Game tick: %d", game.turn)
-	game.log.Printf("There are %d mobs", len(game.currentDungeon.mobs))
 	changed := false
 	for _, m := range game.currentDungeon.Mobs() {
 		changed = m.Tick(game.turn) || changed

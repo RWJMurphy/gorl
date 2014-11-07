@@ -106,7 +106,7 @@ func (f *FeatureGroup) Each() []Feature {
 
 func (f *FeatureGroup) Crossable() bool {
 	for _, f := range f.Each() {
-		if f.Flags() & FlagCrossable == 0 {
+		if f.Flags()&FlagCrossable == 0 {
 			return false
 		}
 	}
@@ -115,7 +115,7 @@ func (f *FeatureGroup) Crossable() bool {
 
 func (f *FeatureGroup) AddItem(i Item) {
 	if f.items == nil {
-		f.items = make([]Item, 1)
+		f.items = make([]Item, 0)
 	}
 	f.items = append(f.items, i)
 }
@@ -182,6 +182,21 @@ func NewDungeon(width, height int, log log.Logger) *Dungeon {
 	return d
 }
 
+func (d *Dungeon) MobAt(loc Coord) Mob {
+	return d.FeatureGroup(loc).mob
+}
+
+func (d *Dungeon) FeatureAt(loc Coord) Feature {
+	return d.FeatureGroup(loc).feature
+}
+
+func (d *Dungeon) ItemsAt(loc Coord) []Item {
+	items := d.FeatureGroup(loc).items
+	itemsCopy := make([]Item, len(items))
+	copy(itemsCopy, items)
+	return itemsCopy
+}
+
 func (d *Dungeon) FeatureGroup(loc Coord) *FeatureGroup {
 	if _, exists := d.features[loc]; !exists {
 		d.features[loc] = &FeatureGroup{
@@ -245,6 +260,14 @@ func (d *Dungeon) AddMob(mob Mob) {
 		)
 	}
 	fg.mob = mob
+}
+
+func (d *Dungeon) ReapDead() {
+	for _, m := range d.Mobs() {
+		if m.Dead() {
+			d.DeleteMob(m)
+		}
+	}
 }
 
 // DeleteMob removes Mob mob from the Dungeon.

@@ -48,6 +48,7 @@ var TheDungeon = []string{
 	"#..........................................................#",
 	"############################################################",
 }
+
 func GenerateDungeon(log log.Logger) *Dungeon {
 	width, height := len(TheDungeon[0]), len(TheDungeon)
 	d := NewDungeon(width, height, log)

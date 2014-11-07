@@ -143,10 +143,23 @@ func (c Coord) Plus(m Movement) Coord {
 	return c
 }
 
-// Move tries to move the player in the direction `movement`, and returns a bool
-// indicating whether it was successful.
-func (game *Game) Move(movement Movement) bool {
-	if moved := game.currentDungeon.MoveMob(game.player, movement); !moved {
+// MoveOrAct calculates the destination tile based on the movement parameter and
+// the Player's location, and then
+//   * if there is a mob on the destination, attacks the mob and returns true
+//   * if not and destination is Crossable, moves the player there and returns true
+//   * if the destination is not Crossable, returns false
+func (game *Game) MoveOrAct(movement Movement) bool {
+	destination := game.player.Loc().Plus(movement)
+	if mob := game.currentDungeon.MobAt(destination); mob != nil {
+		if damageDealt, ok := game.player.Attack(mob); ok {
+			game.AddMessage(fmt.Sprintf("Hit %s for %d damage", mob.Name(), damageDealt))
+			if mob.Dead() {
+				game.AddMessage(fmt.Sprintf("The %s dies!", mob.Name()))
+			}
+			return true
+		}
+		return false
+	} else if moved := game.currentDungeon.MoveMob(game.player, movement); !moved {
 		return moved
 	}
 
@@ -165,6 +178,7 @@ func (game *Game) Move(movement Movement) bool {
 
 // AddMessage adds a message to the UI's message buffer for display in the MessageLogWidget
 func (game *Game) AddMessage(message string) {
+	game.log.Println(message)
 	game.messages = append(game.messages, message)
 	messageCount := game.ui.messageWidget.height - 2
 	if messageCount > len(game.messages) {
@@ -201,13 +215,16 @@ mainLoop:
 				nextState = GameWorldTurn
 			case ActDropAll:
 				for _, item := range game.player.Inventory() {
+					game.log.Printf("Player dropping %s", item)
 					game.player.DropItem(item, game.currentDungeon)
 					game.AddMessage(fmt.Sprintf("Dropped %s", item.Name()))
 				}
 			case ActPickUp:
-				fg := game.currentDungeon.FeatureGroup(game.player.Loc())
-				if len(fg.items) > 0 {
-					for _, item := range fg.items {
+				items := game.currentDungeon.ItemsAt(game.player.Loc())
+				game.log.Printf("Attempting to pick up items: %s", items)
+				if len(items) > 0 {
+					for _, item := range items {
+						game.log.Printf("Player picking up %s", item)
 						game.currentDungeon.DeleteItem(item)
 						game.player.AddToInventory(item)
 						game.AddMessage(fmt.Sprintf("Picked up %s", item.Name()))
@@ -227,6 +244,7 @@ mainLoop:
 		default:
 			log.Panicf("Bad game state: %s", game.state)
 		}
+		game.currentDungeon.ReapDead()
 		game.ui.Paint()
 		game.state = nextState
 	}

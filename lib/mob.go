@@ -4,11 +4,15 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+
+	"github.com/nsf/termbox-go"
 )
 
 // Mob is a Movable OBject.
 type Mob interface {
 	Feature
+	Attacker
+	Defender
 	VisionRadius() int
 	Move(Movement)
 	Tick(uint) bool
@@ -23,11 +27,19 @@ type mob struct {
 	feature
 	visionRadius int
 	inventory    []Item
-	dungeon      *Dungeon
-	lastTicked   uint
+	// BUG I expect this will come out of sync. Head's up, future Reed.
+	dungeon    *Dungeon
+	lastTicked uint
+
+	maxHealth  uint
+	health     uint
+	baseAttack uint
 
 	log log.Logger
 }
+
+const MobDefaultHealth = 10
+const MobDefaultAttack = 2
 
 // NewMob creates and returns a new Mob
 func NewMob(name string, char rune, log log.Logger, dungeon *Dungeon) Mob {
@@ -35,17 +47,31 @@ func NewMob(name string, char rune, log log.Logger, dungeon *Dungeon) Mob {
 	m.feature = *NewFeature(name, char).(*feature)
 	m.inventory = make([]Item, 0)
 	m.log = log
+	m.maxHealth = MobDefaultHealth
+	m.health = m.maxHealth
+	m.baseAttack = MobDefaultAttack
 	m.dungeon = dungeon
 	return m
 }
 
+func (m *mob) String() string {
+	return fmt.Sprintf(
+		"<Mob@%p feature:%s, visionRadius:%d>",
+		&m,
+		m.feature.String(),
+		m.visionRadius,
+	)
+}
+
 func (m *mob) Tick(turn uint) bool {
+	if m.Dead() {
+		return false
+	}
 	if m.lastTicked != turn-1 {
 		m.log.Panicf("%s out of sync! Last ticked: %d, ticking: %d", m, m.lastTicked, turn)
 	}
 	m.lastTicked = turn
 	dx, dy := rand.Intn(3)-1, rand.Intn(3)-1
-	// m.log.Printf("%s moving %d, %d", m, dx, dy)
 	return m.dungeon.MoveMob(m, Movement{dx, dy})
 }
 
@@ -56,15 +82,6 @@ func (m *mob) VisionRadius() int {
 func (m *mob) Move(movement Movement) {
 	m.loc.x += movement.x
 	m.loc.y += movement.y
-}
-
-func (m *mob) String() string {
-	return fmt.Sprintf(
-		"<Mob@%p feature:%s, visionRadius:%d>",
-		&m,
-		m.feature.String(),
-		m.visionRadius,
-	)
 }
 
 func (m *mob) LightRadius() int {
@@ -98,7 +115,6 @@ func (m *mob) DropItem(item Item, d *Dungeon) bool {
 	return false
 }
 
-
 func (m *mob) RemoveFromInventory(item Item) bool {
 	for i, inventoryItem := range m.inventory {
 		if inventoryItem == item {
@@ -109,4 +125,39 @@ func (m *mob) RemoveFromInventory(item Item) bool {
 		}
 	}
 	return false
+}
+
+func (m *mob) die() {
+	// on death, drop corpse
+	corpse := NewItem("corpse", '%', 100)
+	corpse.SetColor(termbox.ColorRed)
+	m.AddToInventory(corpse)
+	m.DropItem(corpse, m.dungeon)
+	m.log.Printf("%s dropped %s on death", m, corpse)
+}
+
+func (m *mob) Dead() bool {
+	return m.health <= 0
+}
+
+func (m *mob) AttackStrength() uint {
+	return m.baseAttack
+}
+
+func (m *mob) AttackedFor(damage uint) uint {
+	if damage >= m.health {
+		m.health = 0
+		m.die()
+	} else {
+		m.health -= damage
+	}
+	return damage
+}
+
+func (m *mob) Attack(d Defender) (uint, bool) {
+	if !d.Dead() {
+		damageDealt := d.AttackedFor(m.AttackStrength())
+		return damageDealt, true
+	}
+	return 0, false
 }

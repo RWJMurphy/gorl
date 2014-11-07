@@ -158,7 +158,7 @@ func (camera *CameraWidget) Paint() {
 						color = fg.items[len(fg.items)-1].Color()
 					} else {
 						char = tile.c
-						color = tile.color|termbox.AttrBold
+						color = tile.color | termbox.AttrBold
 					}
 					camera.ui.PutRuneColor(out.x, out.y, char, color, termbox.ColorDefault)
 				} else {
@@ -373,7 +373,7 @@ func (ui *UI) HandleMovementKey(char rune, key termbox.Key) bool {
 	default:
 		ui.log.Panicf("Not a movement key: %c", char)
 	}
-	return ui.game.Move(movement)
+	return ui.game.MoveOrAct(movement)
 }
 
 // HandleEvent handles a termbox.Event

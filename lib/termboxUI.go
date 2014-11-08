@@ -165,7 +165,6 @@ func (ui *termboxUI) PrintAt(loc Vec, s string) {
 // PaintBox fills a rectangular section with rune r. The rectangle is defined by
 // its corners (x1, y1) and (x2, y2).
 func (ui *termboxUI) PaintBox(rect RectangleI, r rune) {
-	ui.log.Printf("Painting box %s", rect)
 	x1, y1 := rect.TopLeft().x, rect.TopLeft().y
 	x2, y2 := rect.BottomRight().x, rect.BottomRight().y
 
@@ -186,7 +185,6 @@ func (ui *termboxUI) PaintBox(rect RectangleI, r rune) {
 // PaintBorder paints a border along the rectangle (x1, y2), (x2, y2)
 // with the runes defines by style.
 func (ui *termboxUI) PaintBorder(rect RectangleI, style boxStyle) {
-	ui.log.Printf("Painting border around %s", rect)
 	x1, y1 := rect.TopLeft().x, rect.TopLeft().y
 	x2, y2 := rect.BottomRight().x, rect.BottomRight().y
 

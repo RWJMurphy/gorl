@@ -82,7 +82,7 @@ type logWidget struct {
 func (lw *logWidget) Paint() {
 	var loc Vec
 	for i, m := range lw.ui.Messages() {
-		loc = lw.TopRight().Plus(Vec{1, 1 + i})
+		loc = lw.TopLeft().Plus(Vec{1, 1 + i})
 		lw.ui.PrintAt(loc, m)
 	}
 	lw.widget.Paint()

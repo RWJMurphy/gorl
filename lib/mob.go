@@ -57,7 +57,7 @@ func NewMob(name string, char rune, log log.Logger, dungeon *Dungeon) Mob {
 func (m *mob) String() string {
 	return fmt.Sprintf(
 		"<Mob@%p feature:%s, visionRadius:%d>",
-		&m,
+		m,
 		m.feature.String(),
 		m.visionRadius,
 	)

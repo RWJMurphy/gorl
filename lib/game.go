@@ -64,7 +64,7 @@ func (s GameState) String() string {
 
 // Game is the entry type to GoRL. Manages the UI, dungeons, player, etc.
 type Game struct {
-	ui             *UI
+	ui             UI
 	messages       []string
 	player         Player
 	dungeons       []*Dungeon
@@ -97,12 +97,12 @@ func NewGame(log log.Logger) (*Game, error) {
 
 	for i := 0; i < 10; i++ {
 		x, y := rand.Intn(dungeon.width), rand.Intn(dungeon.height)
-		for !(dungeon.Tile(x, y).Crossable() && dungeon.FeatureGroup(Coord{x, y}).Crossable()) {
+		for !(dungeon.Tile(x, y).Crossable() && dungeon.FeatureGroup(Vec{x, y}).Crossable()) {
 			x, y = rand.Intn(dungeon.width), rand.Intn(dungeon.height)
 		}
 		mob := NewMob(fmt.Sprintf("orc #%d", i), 'o', game.log, dungeon)
 		mob.SetColor(termbox.ColorGreen)
-		mob.SetLoc(Coord{x, y})
+		mob.SetLoc(Vec{x, y})
 
 		torch := NewItem("torch", '!', 1)
 		torch.SetLightRadius(10)
@@ -119,7 +119,7 @@ func NewGame(log log.Logger) (*Game, error) {
 		}
 	})
 
-	ui, err := NewUI(game)
+	ui, err := NewTermboxUI(game)
 	if err != nil {
 		return nil, err
 	}
@@ -131,24 +131,12 @@ func NewGame(log log.Logger) (*Game, error) {
 	return game, nil
 }
 
-// Movement represents a change in location.
-type Movement struct {
-	x, y int
-}
-
-// Plus adds a Movement to a Coord, and returns a new Coord
-func (c Coord) Plus(m Movement) Coord {
-	c.x += m.x
-	c.y += m.y
-	return c
-}
-
 // MoveOrAct calculates the destination tile based on the movement parameter and
 // the Player's location, and then
 //   * if there is a mob on the destination, attacks the mob and returns true
 //   * if not and destination is Crossable, moves the player there and returns true
 //   * if the destination is not Crossable, returns false
-func (game *Game) MoveOrAct(movement Movement) bool {
+func (game *Game) MoveOrAct(movement Vec) bool {
 	destination := game.player.Loc().Plus(movement)
 	if mob := game.currentDungeon.MobAt(destination); mob != nil {
 		if damageDealt, ok := game.player.Attack(mob); ok {
@@ -172,7 +160,7 @@ func (game *Game) MoveOrAct(movement Movement) bool {
 	})
 
 	game.ui.PointCameraAt(game.currentDungeon, game.player.Loc())
-	game.ui.dirty = true
+	game.ui.MarkDirty()
 	return true
 }
 
@@ -180,12 +168,12 @@ func (game *Game) MoveOrAct(movement Movement) bool {
 func (game *Game) AddMessage(message string) {
 	game.log.Println(message)
 	game.messages = append(game.messages, message)
-	messageCount := game.ui.messageWidget.height - 2
+	messageCount := game.ui.MessagesWanted()
 	if messageCount > len(game.messages) {
 		messageCount = len(game.messages)
 	}
-	game.ui.messages = game.messages[len(game.messages)-messageCount:]
-	game.ui.dirty = true
+	game.ui.SetMessages(game.messages[len(game.messages)-messageCount:])
+	game.ui.MarkDirty()
 }
 
 // Run runs the Game.
@@ -208,7 +196,7 @@ mainLoop:
 			game.WorldTick()
 			nextState = GamePlayerTurn
 		case GamePlayerTurn:
-			action, nextState = game.ui.WaitAndHandleInput()
+			action, nextState = game.ui.Tick()
 
 			switch action {
 			case ActWait:
@@ -260,7 +248,7 @@ func (game *Game) WorldTick() {
 		changed = m.Tick(game.turn) || changed
 	}
 	if changed {
-		game.ui.dirty = true
+		game.ui.MarkDirty()
 	}
 	game.currentDungeon.ResetFlag(FlagLit)
 	game.currentDungeon.CalculateLighting()

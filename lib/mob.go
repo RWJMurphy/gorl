@@ -14,7 +14,7 @@ type Mob interface {
 	Attacker
 	Defender
 	VisionRadius() int
-	Move(Movement)
+	Move(Vec)
 	Tick(uint) bool
 
 	Inventory() []Item
@@ -72,14 +72,14 @@ func (m *mob) Tick(turn uint) bool {
 	}
 	m.lastTicked = turn
 	dx, dy := rand.Intn(3)-1, rand.Intn(3)-1
-	return m.dungeon.MoveMob(m, Movement{dx, dy})
+	return m.dungeon.MoveMob(m, Vec{dx, dy})
 }
 
 func (m *mob) VisionRadius() int {
 	return m.visionRadius
 }
 
-func (m *mob) Move(movement Movement) {
+func (m *mob) Move(movement Vec) {
 	m.loc.x += movement.x
 	m.loc.y += movement.y
 }

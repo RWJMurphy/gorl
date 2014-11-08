@@ -8,15 +8,6 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-// A Coord is a pair of x, y coordinates.
-type Coord struct {
-	x, y int
-}
-
-func (c Coord) String() string {
-	return fmt.Sprintf("<Coord x:%d, y:%d>", c.x, c.y)
-}
-
 // A Tile represents a square in a Dungeon.
 type Tile struct {
 	c     rune
@@ -155,9 +146,9 @@ func (f *FeatureGroup) LightRadius() int {
 // Dungeon represents a level of the game.
 type Dungeon struct {
 	width, height int
-	origin        Coord
+	origin        Vec
 	tiles         [][]Tile
-	features      map[Coord]*FeatureGroup
+	features      map[Vec]*FeatureGroup
 	log           log.Logger
 }
 
@@ -174,30 +165,30 @@ func NewDungeon(width, height int, log log.Logger) *Dungeon {
 
 	d := &Dungeon{
 		width, height,
-		Coord{width / 2, height / 2},
+		Vec{width / 2, height / 2},
 		tiles,
-		make(map[Coord]*FeatureGroup),
+		make(map[Vec]*FeatureGroup),
 		log,
 	}
 	return d
 }
 
-func (d *Dungeon) MobAt(loc Coord) Mob {
+func (d *Dungeon) MobAt(loc Vec) Mob {
 	return d.FeatureGroup(loc).mob
 }
 
-func (d *Dungeon) FeatureAt(loc Coord) Feature {
+func (d *Dungeon) FeatureAt(loc Vec) Feature {
 	return d.FeatureGroup(loc).feature
 }
 
-func (d *Dungeon) ItemsAt(loc Coord) []Item {
+func (d *Dungeon) ItemsAt(loc Vec) []Item {
 	items := d.FeatureGroup(loc).items
 	itemsCopy := make([]Item, len(items))
 	copy(itemsCopy, items)
 	return itemsCopy
 }
 
-func (d *Dungeon) FeatureGroup(loc Coord) *FeatureGroup {
+func (d *Dungeon) FeatureGroup(loc Vec) *FeatureGroup {
 	if _, exists := d.features[loc]; !exists {
 		d.features[loc] = &FeatureGroup{
 			nil,
@@ -283,7 +274,7 @@ func (d *Dungeon) DeleteMob(mob Mob) {
 
 // MoveMob attempts to move mob in the direction move, returning true if
 // successful and false otherwise.
-func (d *Dungeon) MoveMob(mob Mob, move Movement) bool {
+func (d *Dungeon) MoveMob(mob Mob, move Vec) bool {
 	dest := mob.Loc().Plus(move)
 	if !d.FeatureGroup(dest).Crossable() {
 		return false
@@ -319,7 +310,7 @@ func (d *Dungeon) CalculateLighting() {
 		radius = features.LightRadius()
 		if radius > 0 {
 			goroutineCount++
-			go func(loc Coord, radius int) {
+			go func(loc Vec, radius int) {
 				d.FlagByLineOfSight(loc, radius, FlagLit)
 				signal <- true
 			}(loc, radius)
@@ -357,7 +348,7 @@ var octantMultiplier = [4][8]int{
 //
 // TODO: rewrite based on something with a clear FOSS license, e.g.
 // https://bitbucket.org/munificent/amaranth/src/2fc3311d903f/Amaranth.Engine/Classes/Fov.cs
-func (d *Dungeon) FlagByLineOfSight(origin Coord, radius int, flag Flag) {
+func (d *Dungeon) FlagByLineOfSight(origin Vec, radius int, flag Flag) {
 	d.OnTilesInLineOfSight(origin, radius, func(t *Tile) {
 		t.flags |= flag
 	})
@@ -365,14 +356,14 @@ func (d *Dungeon) FlagByLineOfSight(origin Coord, radius int, flag Flag) {
 
 type tileFunc func(*Tile)
 
-func (d *Dungeon) OnTilesInLineOfSight(origin Coord, radius int, do tileFunc) {
+func (d *Dungeon) OnTilesInLineOfSight(origin Vec, radius int, do tileFunc) {
 	if radius == 0 {
 		return
 	}
 	do(&d.tiles[origin.y][origin.x])
 	signal := make(chan bool)
 	for octant := 0; octant < 8; octant++ {
-		go func(origin Coord, radius int, do tileFunc, octant int) {
+		go func(origin Vec, radius int, do tileFunc, octant int) {
 			d.castFlag(
 				origin.x, origin.y, 1,
 				1.0, 0.0,

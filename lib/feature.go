@@ -14,8 +14,8 @@ type Feature interface {
 	Color() termbox.Attribute
 	SetColor(termbox.Attribute)
 
-	Loc() Coord
-	SetLoc(Coord)
+	Loc() Vec
+	SetLoc(Vec)
 
 	Flags() Flag
 
@@ -24,7 +24,7 @@ type Feature interface {
 }
 
 type feature struct {
-	loc         Coord
+	loc         Vec
 	name        string
 	char        rune
 	color       termbox.Attribute
@@ -41,11 +41,11 @@ func NewFeature(name string, char rune) Feature {
 	return f
 }
 
-func (f *feature) Loc() Coord {
+func (f *feature) Loc() Vec {
 	return f.loc
 }
 
-func (f *feature) SetLoc(loc Coord) {
+func (f *feature) SetLoc(loc Vec) {
 	f.loc = loc
 }
 

@@ -1,0 +1,99 @@
+package gorl
+
+import "github.com/nsf/termbox-go"
+
+type widget struct {
+	Rectangle
+	ui TermboxUI
+}
+
+// Paint paints the Widget to the UI
+func (w *widget) Paint() {
+	w.ui.PaintBorder(w, defaultBoxStyle)
+}
+
+type cameraWidget struct {
+	widget
+	dungeon *Dungeon
+	center  Vec
+}
+
+func TermboxCameraWidget(location Rectangle, ui TermboxUI) *cameraWidget {
+	cw := &cameraWidget{
+		widget{location, ui},
+		nil,
+		Vec{},
+	}
+	return cw
+}
+
+// Paint paints the cameraWidget to the TermboxUI
+func (camera *cameraWidget) Paint() {
+	var (
+		tile   *Tile
+		offset Vec
+		loc    Vec
+		out    Vec
+		x, y   int
+		char   rune
+		color  termbox.Attribute
+	)
+
+	ne := camera.center.Plus(Vec{-camera.widget.Width() / 2, -camera.widget.Height() / 2})
+
+	for x = 0; x < camera.widget.Width(); x++ {
+		for y = 0; y < camera.widget.Height(); y++ {
+			offset = Vec{x, y}
+			loc = ne.Plus(offset)
+			out = camera.TopLeft().Plus(offset)
+			tile = camera.dungeon.Tile(loc.x, loc.y)
+			if tile.Seen() || tile.Visible() {
+				if tile.Visible() {
+					fg := camera.dungeon.FeatureGroup(loc)
+					if fg.mob != nil {
+						char = fg.mob.Char()
+						color = fg.mob.Color()
+					} else if fg.feature != nil {
+						char = fg.feature.Char()
+						color = fg.feature.Color()
+					} else if len(fg.items) > 0 {
+						char = fg.items[len(fg.items)-1].Char()
+						color = fg.items[len(fg.items)-1].Color()
+					} else {
+						char = tile.c
+						color = tile.color | termbox.AttrBold
+					}
+					camera.ui.PutRuneColor(out, char, color, termbox.ColorDefault)
+				} else {
+					camera.ui.PutRuneColor(out, tile.c, tile.color, termbox.ColorDefault)
+				}
+			}
+		}
+	}
+	camera.widget.Paint()
+}
+
+type logWidget struct {
+	widget
+	messages []string
+}
+
+// Paint paints the logWidget to the TermboxUI
+func (lw *logWidget) Paint() {
+	var loc Vec
+	for i, m := range lw.ui.Messages() {
+		loc = lw.TopRight().Plus(Vec{1, 1 + i})
+		lw.ui.PrintAt(loc, m)
+	}
+	lw.widget.Paint()
+}
+
+// A menuWidget in theory displays a menu.
+type menuWidget struct {
+	widget
+}
+
+// Paint paints the MenuWidget to the UI
+func (mw *menuWidget) Paint() {
+	mw.widget.Paint()
+}

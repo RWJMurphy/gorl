@@ -19,15 +19,16 @@ type TermboxUI interface {
 }
 
 type termboxUI struct {
-	paintables   []Paintable
-	cameraWidget *cameraWidget
-	menuWidget   *menuWidget
-	logWidget    *logWidget
-	messages     []string
-	state        State
-	game         *Game
-	dirty        bool
-	log          *log.Logger
+	paintables      []Paintable
+	cameraWidget    *cameraWidget
+	menuWidget      *menuWidget
+	logWidget       *logWidget
+	inventoryWidget *inventoryWidget
+	messages        []string
+	state           State
+	game            *Game
+	dirty           bool
+	log             *log.Logger
 }
 
 func NewTermboxUI(game *Game) (TermboxUI, error) {
@@ -70,6 +71,16 @@ func NewTermboxUI(game *Game) (TermboxUI, error) {
 			},
 			ui,
 		},
+	}
+	ui.inventoryWidget = &inventoryWidget{
+		widget{
+			Rectangle{
+				Vec{0, 0},
+				Vec{width, height - height/4},
+			},
+			ui,
+		},
+		game.player,
 	}
 	ui.MarkDirty()
 	ui.setState(StateGame)

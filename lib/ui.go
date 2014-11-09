@@ -77,6 +77,11 @@ type MenuWidget interface {
 	Widget
 }
 
+type InventoryWidget interface {
+	Widget
+	SetOwner(Mob)
+}
+
 // Single tile Movement constants
 var (
 	MoveNorth     = Vec{0, -1}

@@ -92,3 +92,25 @@ type menuWidget struct {
 func (mw *menuWidget) Paint() {
 	mw.widget.Paint()
 }
+
+type inventoryWidget struct {
+	widget
+	owner Mob
+}
+
+func (iw *inventoryWidget) SetOwner(m Mob) {
+	iw.owner = m
+}
+
+func (iw *inventoryWidget) Paint() {
+	var loc Vec
+	iw.ui.PrintAt(
+		iw.TopLeft().Plus(Vec{1, 1}),
+		"Inventory",
+	)
+	for i, item := range iw.owner.Inventory() {
+		loc = iw.TopLeft().Plus(Vec{2, 2 + i})
+		iw.ui.PrintAt(loc, fmt.Sprintf("* %s", item.Name()))
+	}
+	iw.widget.Paint()
+}

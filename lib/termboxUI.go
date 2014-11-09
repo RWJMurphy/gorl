@@ -29,6 +29,8 @@ type termboxUI struct {
 	game            *Game
 	dirty           bool
 	log             *log.Logger
+	// ugh this is hacky
+	stateAction     PlayerAction
 }
 
 func NewTermboxUI(game *Game) (TermboxUI, error) {
@@ -83,7 +85,7 @@ func NewTermboxUI(game *Game) (TermboxUI, error) {
 		game.player,
 	}
 	ui.MarkDirty()
-	ui.setState(StateGame)
+	ui.setState(StateGame, PlayerAction{ActNone, nil})
 	return ui, nil
 }
 
@@ -172,13 +174,17 @@ func (ui *termboxUI) HandleKey(char rune, key termbox.Key) (PlayerAction, GameSt
 			}
 			return action, ui.game.state
 		case 'i':
-			ui.setState(StateInventory)
+			ui.setState(StateInventory, PlayerAction{ActNone, nil})
+			return PlayerAction{ActNone, nil}, GamePlayerTurn
+		// Drop
+		case 'd':
+			ui.setState(StateInventory, PlayerAction{ActDrop, nil})
 			return PlayerAction{ActNone, nil}, GamePlayerTurn
 		// Drop all
 		case 'D':
 			return PlayerAction{ActDropAll, nil}, GameWorldTurn
 		case ',', 'g':
-			return PlayerAction{ActPickUp, nil}, GameWorldTurn
+			return PlayerAction{ActPickUpAll, nil}, GameWorldTurn
 		case 0:
 			switch key {
 			// Quit
@@ -197,14 +203,20 @@ func (ui *termboxUI) HandleKey(char rune, key termbox.Key) (PlayerAction, GameSt
 			}
 		}
 	case StateInventory:
-		switch char {
-		case 'q', 'Q':
-			ui.setState(StateGame)
+		if char != 0 {
+			inventoryIndex := int(char - 'a')
+			inventory := ui.game.player.Inventory()
+			if inventoryIndex >= 0 &&  inventoryIndex < len(inventory) {
+				stateAction := ui.stateAction
+				stateAction.target = inventory[inventoryIndex]
+				ui.setState(StateGame, PlayerAction{ActNone, nil})
+				return stateAction, GameWorldTurn
+			}
 			return PlayerAction{ActNone, nil}, ui.game.state
 		}
 		switch key {
 		case termbox.KeyEsc:
-			ui.setState(StateGame)
+			ui.setState(StateGame, PlayerAction{ActNone, nil})
 			return PlayerAction{ActNone, nil}, ui.game.state
 		}
 	case StateClosed:
@@ -275,8 +287,10 @@ func (ui *termboxUI) HandleEvent(e termbox.Event) (PlayerAction, GameState) {
 	return PlayerAction{ActNone, nil}, GameInvalidState
 }
 
-func (ui *termboxUI) setState(state State) {
+func (ui *termboxUI) setState(state State, stateAction PlayerAction) {
 	ui.log.Printf("termboxUI state change: %s -> %s", ui.state, state)
+	ui.log.Printf("state expects action: %s", stateAction)
+	ui.stateAction = stateAction
 	if ui.state == state {
 		return
 	}

@@ -28,9 +28,10 @@ type playerAction uint
 const (
 	ActNone playerAction = iota
 	ActWait
-	ActMove
+	ActMove // target is a Vec to move
+	ActDrop // target is an Item to drop
 	ActDropAll
-	ActPickUp
+	ActPickUpAll
 )
 
 type PlayerAction struct {
@@ -46,8 +47,8 @@ func (a playerAction) String() string {
 		return "ActWait"
 	case ActDropAll:
 		return "ActDropAll"
-	case ActPickUp:
-		return "ActPickUp"
+	case ActPickUpAll:
+		return "ActPickUpAll"
 	default:
 		return fmt.Sprintf("playerAction(%d)", a)
 	}
@@ -207,13 +208,16 @@ mainLoop:
 			switch action.action {
 			case ActWait:
 				nextState = GameWorldTurn
+			case ActDrop:
+				item := action.target.(Item)
+				game.player.DropItem(item, game.currentDungeon)
+				game.AddMessage(fmt.Sprintf("Dropped %s", item.Name()))
 			case ActDropAll:
 				for _, item := range game.player.Inventory() {
-					game.log.Printf("Player dropping %s", item)
 					game.player.DropItem(item, game.currentDungeon)
 					game.AddMessage(fmt.Sprintf("Dropped %s", item.Name()))
 				}
-			case ActPickUp:
+			case ActPickUpAll:
 				items := game.currentDungeon.ItemsAt(game.player.Loc())
 				game.log.Printf("Attempting to pick up items: %s", items)
 				if len(items) > 0 {

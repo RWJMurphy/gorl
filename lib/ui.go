@@ -1,5 +1,7 @@
 package gorl
 
+import "fmt"
+
 // Paintable is anything that can be painted
 type Paintable interface {
 	Paint()
@@ -9,8 +11,10 @@ type Paintable interface {
 type State int
 
 const (
+	// StateInvalid represents any invalid UI State
+	StateInvalid State = iota
 	// StateGame is the default UI state -- shows the MapWidget, MessageLogWidget and MenuWidget; waits for input
-	StateGame State = iota
+	StateGame
 	// StateInventory displays the inventory view
 	StateInventory
 	// StateClosed is a closed UI. Entering this state is a signal to shut the game down cleanly.
@@ -19,6 +23,8 @@ const (
 
 func (state State) String() string {
 	switch state {
+	case StateInvalid:
+		return "StateInvalid"
 	case StateGame:
 		return "StateGame"
 	case StateClosed:
@@ -26,7 +32,7 @@ func (state State) String() string {
 	case StateInventory:
 		return "StateInventory"
 	default:
-		return string(int(state))
+		return fmt.Sprintf("State(%d)", state)
 	}
 }
 
@@ -37,7 +43,7 @@ type UI interface {
 	MarkDirty()
 	IsDirty() bool
 	Paint()
-	Tick() (PlayerAction, GameState)
+	DoEvent() (PlayerAction, GameState)
 
 	PointCameraAt(*Dungeon, Vec)
 

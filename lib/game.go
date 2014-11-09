@@ -190,13 +190,12 @@ func (game *Game) MainLoop() {
 	game.log.Println("Entering main loop")
 mainLoop:
 	for {
-		game.log.Printf("game.state = %s", game.state)
 		switch game.state {
 		case GameWorldTurn:
 			game.WorldTick()
 			nextState = GamePlayerTurn
 		case GamePlayerTurn:
-			action, nextState = game.ui.Tick()
+			action, nextState = game.ui.DoEvent()
 
 			switch action {
 			case ActWait:
@@ -234,6 +233,7 @@ mainLoop:
 		}
 		game.currentDungeon.ReapDead()
 		game.ui.Paint()
+		game.log.Printf("Game state change: %s -> %s", game.state, nextState)
 		game.state = nextState
 	}
 }
@@ -250,8 +250,14 @@ func (game *Game) WorldTick() {
 	if changed {
 		game.ui.MarkDirty()
 	}
-	game.currentDungeon.ResetFlag(FlagLit)
+	game.currentDungeon.ResetFlag(FlagLit | FlagVisible)
 	game.currentDungeon.CalculateLighting()
+	game.currentDungeon.OnTilesInLineOfSight(game.player.Loc(), game.player.VisionRadius(), func(t *Tile) {
+		if t.Lit() {
+			t.flags |= FlagVisible | FlagSeen
+		}
+	})
+
 	tickRunTime := time.Now().Sub(tickStartTime)
 	game.log.Printf("Tick took %v to run", tickRunTime)
 }

@@ -71,13 +71,8 @@ func NewTermboxUI(game *Game) (TermboxUI, error) {
 			ui,
 		},
 	}
-	ui.paintables = []Paintable{
-		ui.logWidget,
-		ui.cameraWidget,
-		ui.menuWidget,
-	}
-	ui.state = StateGame
-	ui.dirty = true
+	ui.MarkDirty()
+	ui.setState(StateGame)
 	return ui, nil
 }
 
@@ -103,9 +98,19 @@ func (ui *termboxUI) State() State {
 	return ui.state
 }
 
-func (ui *termboxUI) Tick() (PlayerAction, GameState) {
-	event := termbox.PollEvent()
-	action, nextState := ui.HandleEvent(event)
+func (ui *termboxUI) DoEvent() (PlayerAction, GameState) {
+	action := ActNone
+	nextState := ui.game.state
+
+	switch ui.State() {
+	case StateGame, StateInventory:
+		event := termbox.PollEvent()
+		action, nextState = ui.HandleEvent(event)
+	case StateClosed:
+		ui.log.Panic("Can't handle event while closed")
+	default:
+		ui.log.Panicf("Can't handle event in state %s", ui.State())
+	}
 	return action, nextState
 }
 
@@ -139,6 +144,149 @@ func (ui *termboxUI) Paint() {
 }
 
 // TermboxUI implementation
+
+// HandleKey handles a termbox.KeyEvent
+func (ui *termboxUI) HandleKey(char rune, key termbox.Key) (PlayerAction, GameState) {
+	switch ui.State() {
+	case StateGame:
+		switch char {
+		// Quit
+		case 'q':
+			return ActNone, GameClosed
+		// Move
+		case 'h', 'j', 'k', 'l', 'y', 'u', 'b', 'n':
+			// TODO: move movement handling to Game
+			moved := ui.HandleMovementKey(char, key)
+			if moved {
+				return ActNone, GameWorldTurn
+			}
+		case 'i':
+			ui.setState(StateInventory)
+			return ActNone, GamePlayerTurn
+		// Drop all
+		case 'D':
+			return ActDropAll, GameWorldTurn
+		case ',', 'g':
+			return ActPickUp, GameWorldTurn
+		case 0:
+			switch key {
+			// Quit
+			case termbox.KeyCtrlC, termbox.KeyEsc:
+				return ActNone, GameClosed
+			// Wait
+			case termbox.KeySpace:
+				return ActWait, GameWorldTurn
+			// Move
+			case termbox.KeyArrowUp, termbox.KeyArrowRight, termbox.KeyArrowDown, termbox.KeyArrowLeft:
+				// TODO: move movement handling to Game
+				if moved := ui.HandleMovementKey(char, key); moved {
+					return ActNone, GameWorldTurn
+				}
+				return ActNone, ui.game.state
+			}
+		}
+	case StateInventory:
+		switch char {
+		case 'q', 'Q':
+			ui.setState(StateGame)
+			return ActNone, ui.game.state
+		}
+		switch key {
+		case termbox.KeyEsc:
+			ui.setState(StateGame)
+			return ActNone, ui.game.state
+		}
+	case StateClosed:
+		ui.log.Panic("am closed, can't handle keys :(")
+	}
+	if char == 0 {
+		ui.game.AddMessage(fmt.Sprintf("Unhandled key: %s", string(key)))
+	} else {
+		ui.game.AddMessage(fmt.Sprintf("Unhandled key: %c", char))
+	}
+	return ActNone, ui.game.state
+}
+
+// HandleMovementKey maps a key to its respective Vec, and passes it
+// to Game.Move. Returns true if the move was successful.
+func (ui *termboxUI) HandleMovementKey(char rune, key termbox.Key) bool {
+	var movement Vec
+	switch char {
+	case 'k':
+		movement = MoveNorth
+	case 'u':
+		movement = MoveNorthEast
+	case 'l':
+		movement = MoveEast
+	case 'n':
+		movement = MoveSouthEast
+	case 'j':
+		movement = MoveSouth
+	case 'b':
+		movement = MoveSouthWest
+	case 'h':
+		movement = MoveWest
+	case 'y':
+		movement = MoveNorthWest
+	case 0:
+		switch key {
+		case termbox.KeyArrowUp:
+			movement = MoveNorth
+		case termbox.KeyArrowRight:
+			movement = MoveEast
+		case termbox.KeyArrowDown:
+			movement = MoveSouth
+		case termbox.KeyArrowLeft:
+			movement = MoveWest
+		default:
+			ui.log.Panicf("Not a movement key: %s", string(key))
+		}
+	default:
+		ui.log.Panicf("Not a movement key: %c", char)
+	}
+	return ui.game.MoveOrAct(movement)
+}
+
+// HandleEvent handles a termbox.Event
+func (ui *termboxUI) HandleEvent(e termbox.Event) (PlayerAction, GameState) {
+	switch e.Type {
+	case termbox.EventResize:
+		ui.MarkDirty()
+		return ActNone, ui.game.state
+	case termbox.EventKey:
+		return ui.HandleKey(e.Ch, e.Key)
+	case termbox.EventError:
+		ui.log.Panic(e.Err)
+	}
+	ui.log.Panicf("Unhandled event: %s", e)
+	return ActNone, GameInvalidState
+}
+
+func (ui *termboxUI) setState(state State) {
+	ui.log.Printf("termboxUI state change: %s -> %s", ui.state, state)
+	if ui.state == state {
+		return
+	}
+	ui.state = state
+	ui.MarkDirty()
+	switch state {
+	case StateGame:
+		ui.paintables = []Paintable{
+			ui.cameraWidget,
+			ui.logWidget,
+			ui.menuWidget,
+		}
+	case StateInventory:
+		ui.paintables = []Paintable{
+			ui.inventoryWidget,
+			ui.logWidget,
+		}
+	case StateClosed:
+		ui.paintables = []Paintable{}
+	default:
+		ui.log.Panicf("Don't know how to setState(%s)", state)
+	}
+}
 
 func (ui *termboxUI) Messages() []string {
 	return ui.messages
@@ -208,107 +356,6 @@ func (ui *termboxUI) PaintBorder(rect RectangleI, style boxStyle) {
 	ui.PutRune(rect.TopRight(), style.corner)
 	ui.PutRune(rect.BottomRight(), style.corner)
 	ui.PutRune(rect.BottomLeft(), style.corner)
-}
-
-// HandleKey handles a termbox.KeyEvent
-func (ui *termboxUI) HandleKey(char rune, key termbox.Key) (PlayerAction, GameState) {
-	switch char {
-	// Quit
-	case 'q':
-		return ActNone, GameClosed
-	// Move
-	case 'h', 'j', 'k', 'l', 'y', 'u', 'b', 'n':
-		// TODO: move movement handling to Game
-		moved := ui.HandleMovementKey(char, key)
-		if moved {
-			return ActNone, GameWorldTurn
-		}
-	// Drop all
-	case 'D':
-		return ActDropAll, GameWorldTurn
-	case ',', 'g':
-		return ActPickUp, GameWorldTurn
-	case 0:
-		switch key {
-		// Quit
-		case termbox.KeyCtrlC, termbox.KeyEsc:
-			return ActNone, GameClosed
-		// Wait
-		case termbox.KeySpace:
-			return ActWait, GameWorldTurn
-		// Move
-		case termbox.KeyArrowUp, termbox.KeyArrowRight, termbox.KeyArrowDown, termbox.KeyArrowLeft:
-			// TODO: move movement handling to Game
-			if moved := ui.HandleMovementKey(char, key); moved {
-				return ActNone, GameWorldTurn
-			}
-		default:
-			msg := fmt.Sprintf("Unhandled key: %s", string(key))
-			ui.log.Println(msg)
-			ui.game.AddMessage(msg)
-		}
-	default:
-		msg := fmt.Sprintf("Unhandled key: %c", char)
-		ui.log.Println(msg)
-		ui.game.AddMessage(msg)
-	}
-	return ActNone, ui.game.state
-}
-
-// HandleMovementKey maps a key to its respective Vec, and passes it
-// to Game.Move. Returns true if the move was successful.
-func (ui *termboxUI) HandleMovementKey(char rune, key termbox.Key) bool {
-	var movement Vec
-	switch char {
-	case 'k':
-		movement = MoveNorth
-	case 'u':
-		movement = MoveNorthEast
-	case 'l':
-		movement = MoveEast
-	case 'n':
-		movement = MoveSouthEast
-	case 'j':
-		movement = MoveSouth
-	case 'b':
-		movement = MoveSouthWest
-	case 'h':
-		movement = MoveWest
-	case 'y':
-		movement = MoveNorthWest
-	case 0:
-		switch key {
-		case termbox.KeyArrowUp:
-			movement = MoveNorth
-		case termbox.KeyArrowRight:
-			movement = MoveEast
-		case termbox.KeyArrowDown:
-			movement = MoveSouth
-		case termbox.KeyArrowLeft:
-			movement = MoveWest
-		default:
-			ui.log.Panicf("Not a movement key: %s", string(key))
-		}
-	default:
-		ui.log.Panicf("Not a movement key: %c", char)
-	}
-	return ui.game.MoveOrAct(movement)
-}
-
-// HandleEvent handles a termbox.Event
-func (ui *termboxUI) HandleEvent(e termbox.Event) (PlayerAction, GameState) {
-	switch e.Type {
-	case termbox.EventKey:
-		return ui.HandleKey(e.Ch, e.Key)
-	case termbox.EventResize:
-		ui.dirty = true
-		return ActNone, ui.game.state
-	case termbox.EventError:
-		ui.log.Panic(e.Err)
-		fallthrough
-	default:
-		return ActNone, GameInvalidState
-	}
 }
 
 type boxStyle struct {

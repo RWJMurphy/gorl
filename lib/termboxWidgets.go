@@ -1,6 +1,10 @@
 package gorl
 
-import "github.com/nsf/termbox-go"
+import (
+	"fmt"
+
+	"github.com/nsf/termbox-go"
+)
 
 type widget struct {
 	Rectangle
@@ -16,15 +20,6 @@ type cameraWidget struct {
 	widget
 	dungeon *Dungeon
 	center  Vec
-}
-
-func TermboxCameraWidget(location Rectangle, ui TermboxUI) *cameraWidget {
-	cw := &cameraWidget{
-		widget{location, ui},
-		nil,
-		Vec{},
-	}
-	return cw
 }
 
 // Paint paints the cameraWidget to the TermboxUI

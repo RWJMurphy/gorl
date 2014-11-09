@@ -71,12 +71,12 @@ type Game struct {
 	currentDungeon *Dungeon
 	state          GameState
 	turn           uint
-	log            log.Logger
+	log            *log.Logger
 }
 
 // NewGame initializes and returns a new Game. Or an error. You should check that.
 // Please `defer game.Close()`.
-func NewGame(log log.Logger) (*Game, error) {
+func NewGame(log *log.Logger) (*Game, error) {
 	game := &Game{}
 	game.log = log
 	game.messages = make([]string, 0, 10)

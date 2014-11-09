@@ -149,13 +149,13 @@ type Dungeon struct {
 	origin        Vec
 	tiles         [][]Tile
 	features      map[Vec]*FeatureGroup
-	log           log.Logger
+	log           *log.Logger
 }
 
 // NewDungeon creates and returns a new Dungeon of the specified width and height.
 //
 // The dungeon's tiles are not populated.
-func NewDungeon(width, height int, log log.Logger) *Dungeon {
+func NewDungeon(width, height int, log *log.Logger) *Dungeon {
 	size := width * height
 	tiles := make([][]Tile, height)
 	tilesRaw := make([]Tile, size)

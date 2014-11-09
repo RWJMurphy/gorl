@@ -19,7 +19,7 @@ const (
 )
 
 // NewPlayer creates and returns a new Player
-func NewPlayer(log log.Logger, dungeon *Dungeon) Player {
+func NewPlayer(log *log.Logger, dungeon *Dungeon) Player {
 	p := &player{
 		*NewMob("Player", '@', log, dungeon).(*mob),
 	}

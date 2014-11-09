@@ -27,7 +27,7 @@ type termboxUI struct {
 	state        State
 	game         *Game
 	dirty        bool
-	log          log.Logger
+	log          *log.Logger
 }
 
 func NewTermboxUI(game *Game) (TermboxUI, error) {

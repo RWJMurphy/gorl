@@ -24,7 +24,7 @@ func main() {
 	defer logFile.Close()
 	log := log.New(logFile, "gorl: ", log.Ldate|log.Ltime|log.Lshortfile)
 	log.Println("Starting gorl")
-	g, err := gorl.NewGame(*log)
+	g, err := gorl.NewGame(log)
 	if err != nil {
 		log.Panic(err)
 	}

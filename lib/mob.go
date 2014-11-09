@@ -35,14 +35,14 @@ type mob struct {
 	health     uint
 	baseAttack uint
 
-	log log.Logger
+	log *log.Logger
 }
 
 const MobDefaultHealth = 10
 const MobDefaultAttack = 2
 
 // NewMob creates and returns a new Mob
-func NewMob(name string, char rune, log log.Logger, dungeon *Dungeon) Mob {
+func NewMob(name string, char rune, log *log.Logger, dungeon *Dungeon) Mob {
 	m := &mob{}
 	m.feature = *NewFeature(name, char).(*feature)
 	m.inventory = make([]Item, 0)

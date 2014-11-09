@@ -166,11 +166,11 @@ func (ui *termboxUI) HandleKey(char rune, key termbox.Key) (PlayerAction, GameSt
 			return PlayerAction{ActNone, nil}, GameClosed
 		// Move
 		case 'h', 'j', 'k', 'l', 'y', 'u', 'b', 'n':
-			// TODO: move movement handling to Game
-			moved := ui.HandleMovementKey(char, key)
-			if moved {
-				return PlayerAction{ActNone, nil}, GameWorldTurn
+			action := ui.HandleMovementKey(char, key)
+			if action.action == ActMove {
+				return action, GameWorldTurn
 			}
+			return action, ui.game.state
 		case 'i':
 			ui.setState(StateInventory)
 			return PlayerAction{ActNone, nil}, GamePlayerTurn
@@ -189,11 +189,11 @@ func (ui *termboxUI) HandleKey(char rune, key termbox.Key) (PlayerAction, GameSt
 				return PlayerAction{ActWait, nil}, GameWorldTurn
 			// Move
 			case termbox.KeyArrowUp, termbox.KeyArrowRight, termbox.KeyArrowDown, termbox.KeyArrowLeft:
-				// TODO: move movement handling to Game
-				if moved := ui.HandleMovementKey(char, key); moved {
-					return PlayerAction{ActNone, nil}, GameWorldTurn
+				action := ui.HandleMovementKey(char, key)
+				if action.action == ActMove {
+					return action, GameWorldTurn
 				}
-				return PlayerAction{ActNone, nil}, ui.game.state
+				return action, ui.game.state
 			}
 		}
 	case StateInventory:
@@ -220,7 +220,7 @@ func (ui *termboxUI) HandleKey(char rune, key termbox.Key) (PlayerAction, GameSt
 
 // HandleMovementKey maps a key to its respective Vec, and passes it
 // to Game.Move. Returns true if the move was successful.
-func (ui *termboxUI) HandleMovementKey(char rune, key termbox.Key) bool {
+func (ui *termboxUI) HandleMovementKey(char rune, key termbox.Key) PlayerAction {
 	var movement Vec
 	switch char {
 	case 'k':
@@ -251,11 +251,13 @@ func (ui *termboxUI) HandleMovementKey(char rune, key termbox.Key) bool {
 			movement = MoveWest
 		default:
 			ui.log.Panicf("Not a movement key: %s", string(key))
+			return PlayerAction{ActNone, nil}
 		}
 	default:
 		ui.log.Panicf("Not a movement key: %c", char)
+		return PlayerAction{ActNone, nil}
 	}
-	return ui.game.MoveOrAct(movement)
+	return PlayerAction{ActMove, movement}
 }
 
 // HandleEvent handles a termbox.Event

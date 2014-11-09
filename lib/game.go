@@ -28,6 +28,7 @@ type playerAction uint
 const (
 	ActNone playerAction = iota
 	ActWait
+	ActMove
 	ActDropAll
 	ActPickUp
 )
@@ -225,6 +226,11 @@ mainLoop:
 				} else {
 					game.AddMessage("Nothing to pick up.")
 					nextState = game.state
+				}
+			case ActMove:
+				direction := action.target.(Vec)
+				if !game.MoveOrAct(direction) {
+					nextState = GamePlayerTurn
 				}
 			case ActNone:
 			default:

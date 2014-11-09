@@ -11,6 +11,6 @@ func (v Vec) Plus(other Vec) Vec {
 	return Vec{v.x + other.x, v.y + other.y}
 }
 
-func (c Vec) String() string {
-	return fmt.Sprintf("<Vec x:%d, y:%d>", c.x, c.y)
+func (v Vec) String() string {
+	return fmt.Sprintf("<Vec x:%d, y:%d>", v.x, v.y)
 }

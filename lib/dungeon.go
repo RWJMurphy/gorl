@@ -80,7 +80,7 @@ type FeatureGroup struct {
 }
 
 func (f *FeatureGroup) Each() []Feature {
-	fs := make([]Feature, 0)
+	var fs []Feature
 	if f.mob != nil {
 		fs = append(fs, f.mob)
 	}
@@ -289,7 +289,7 @@ func (d *Dungeon) MoveMob(mob Mob, move Vec) bool {
 }
 
 func (d *Dungeon) Mobs() []Mob {
-	mobs := make([]Mob, 0)
+	var mobs []Mob
 	for _, fg := range d.features {
 		if fg.mob != nil {
 			mobs = append(mobs, fg.mob)

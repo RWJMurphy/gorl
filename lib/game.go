@@ -23,16 +23,21 @@ const (
 	GameClosed
 )
 
-type PlayerAction uint
+type playerAction uint
 
 const (
-	ActNone PlayerAction = iota
+	ActNone playerAction = iota
 	ActWait
 	ActDropAll
 	ActPickUp
 )
 
-func (a PlayerAction) String() string {
+type PlayerAction struct {
+	action playerAction
+	target interface{}
+}
+
+func (a playerAction) String() string {
 	switch a {
 	case ActNone:
 		return "ActNone"
@@ -43,7 +48,7 @@ func (a PlayerAction) String() string {
 	case ActPickUp:
 		return "ActPickUp"
 	default:
-		return fmt.Sprintf("PlayerAction(%d)", a)
+		return fmt.Sprintf("playerAction(%d)", a)
 	}
 }
 
@@ -166,6 +171,7 @@ func (game *Game) MoveOrAct(movement Vec) bool {
 
 // AddMessage adds a message to the UI's message buffer for display in the MessageLogWidget
 func (game *Game) AddMessage(message string) {
+	message = fmt.Sprintf("%d: %s", game.turn, message)
 	game.log.Println(message)
 	game.messages = append(game.messages, message)
 	messageCount := game.ui.MessagesWanted()
@@ -183,7 +189,7 @@ func (game *Game) Run() {
 
 // MainLoop is the Game's main loop. Ticks the UI until it closes.
 func (game *Game) MainLoop() {
-	action := ActNone
+	var action PlayerAction
 	nextState := game.state
 
 	game.ui.Paint()
@@ -197,7 +203,7 @@ mainLoop:
 		case GamePlayerTurn:
 			action, nextState = game.ui.DoEvent()
 
-			switch action {
+			switch action.action {
 			case ActWait:
 				nextState = GameWorldTurn
 			case ActDropAll:

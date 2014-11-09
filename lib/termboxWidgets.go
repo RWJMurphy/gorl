@@ -109,8 +109,8 @@ func (iw *inventoryWidget) Paint() {
 		"Inventory",
 	)
 	for i, item := range iw.owner.Inventory() {
-		loc = iw.TopLeft().Plus(Vec{2, 2 + i})
-		iw.ui.PrintAt(loc, fmt.Sprintf("* %s", item.Name()))
+		loc = iw.TopLeft().Plus(Vec{1, 3 + i})
+		iw.ui.PrintAt(loc, fmt.Sprintf("%c) %s", 'a' + i, item.Name()))
 	}
 	iw.widget.Paint()
 }

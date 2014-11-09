@@ -110,7 +110,7 @@ func (ui *termboxUI) State() State {
 }
 
 func (ui *termboxUI) DoEvent() (PlayerAction, GameState) {
-	action := ActNone
+	action := PlayerAction{ActNone, nil}
 	nextState := ui.game.state
 
 	switch ui.State() {
@@ -163,49 +163,49 @@ func (ui *termboxUI) HandleKey(char rune, key termbox.Key) (PlayerAction, GameSt
 		switch char {
 		// Quit
 		case 'q':
-			return ActNone, GameClosed
+			return PlayerAction{ActNone, nil}, GameClosed
 		// Move
 		case 'h', 'j', 'k', 'l', 'y', 'u', 'b', 'n':
 			// TODO: move movement handling to Game
 			moved := ui.HandleMovementKey(char, key)
 			if moved {
-				return ActNone, GameWorldTurn
+				return PlayerAction{ActNone, nil}, GameWorldTurn
 			}
 		case 'i':
 			ui.setState(StateInventory)
-			return ActNone, GamePlayerTurn
+			return PlayerAction{ActNone, nil}, GamePlayerTurn
 		// Drop all
 		case 'D':
-			return ActDropAll, GameWorldTurn
+			return PlayerAction{ActDropAll, nil}, GameWorldTurn
 		case ',', 'g':
-			return ActPickUp, GameWorldTurn
+			return PlayerAction{ActPickUp, nil}, GameWorldTurn
 		case 0:
 			switch key {
 			// Quit
 			case termbox.KeyCtrlC, termbox.KeyEsc:
-				return ActNone, GameClosed
+				return PlayerAction{ActNone, nil}, GameClosed
 			// Wait
 			case termbox.KeySpace:
-				return ActWait, GameWorldTurn
+				return PlayerAction{ActWait, nil}, GameWorldTurn
 			// Move
 			case termbox.KeyArrowUp, termbox.KeyArrowRight, termbox.KeyArrowDown, termbox.KeyArrowLeft:
 				// TODO: move movement handling to Game
 				if moved := ui.HandleMovementKey(char, key); moved {
-					return ActNone, GameWorldTurn
+					return PlayerAction{ActNone, nil}, GameWorldTurn
 				}
-				return ActNone, ui.game.state
+				return PlayerAction{ActNone, nil}, ui.game.state
 			}
 		}
 	case StateInventory:
 		switch char {
 		case 'q', 'Q':
 			ui.setState(StateGame)
-			return ActNone, ui.game.state
+			return PlayerAction{ActNone, nil}, ui.game.state
 		}
 		switch key {
 		case termbox.KeyEsc:
 			ui.setState(StateGame)
-			return ActNone, ui.game.state
+			return PlayerAction{ActNone, nil}, ui.game.state
 		}
 	case StateClosed:
 		ui.log.Panic("am closed, can't handle keys :(")
@@ -215,7 +215,7 @@ func (ui *termboxUI) HandleKey(char rune, key termbox.Key) (PlayerAction, GameSt
 	} else {
 		ui.game.AddMessage(fmt.Sprintf("Unhandled key: %c", char))
 	}
-	return ActNone, ui.game.state
+	return PlayerAction{ActNone, nil}, ui.game.state
 }
 
 // HandleMovementKey maps a key to its respective Vec, and passes it
@@ -263,14 +263,14 @@ func (ui *termboxUI) HandleEvent(e termbox.Event) (PlayerAction, GameState) {
 	switch e.Type {
 	case termbox.EventResize:
 		ui.MarkDirty()
-		return ActNone, ui.game.state
+		return PlayerAction{ActNone, nil}, ui.game.state
 	case termbox.EventKey:
 		return ui.HandleKey(e.Ch, e.Key)
 	case termbox.EventError:
 		ui.log.Panic(e.Err)
 	}
 	ui.log.Panicf("Unhandled event: %s", e)
-	return ActNone, GameInvalidState
+	return PlayerAction{ActNone, nil}, GameInvalidState
 }
 
 func (ui *termboxUI) setState(state State) {

@@ -75,9 +75,43 @@ func (m *mob) Tick(turn uint) bool {
 		m.log.Panicf("%s out of sync! Last ticked: %d, ticking: %d", m, m.lastTicked, turn)
 	}
 	m.lastTicked = turn
+
 	m.calculateFOV()
-	dx, dy := rand.Intn(3)-1, rand.Intn(3)-1
-	return m.dungeon.MoveMob(m, Vec{dx, dy})
+	var enemies, items []Feature
+
+	for _, loc := range m.fov {
+		fg := m.dungeon.FeatureGroup(loc)
+		if fg.mob != nil && fg.mob != m {
+			enemies = append(enemies, fg.mob)
+		}
+		if len(fg.items) > 0 {
+			for _, item := range fg.items {
+				items = append(items, item)
+			}
+		}
+	}
+	var direction Vec
+	if len(enemies) > 0 {
+		direction = enemies[0].Loc().Sub(m.Loc())
+		m.log.Printf("%s@%s targeting %s@%s", m.Name(), m.Loc(), enemies[0].Name(), enemies[0].Loc())
+	} else if len(items) > 0 {
+		direction = items[0].Loc().Sub(m.Loc())
+		m.log.Printf("%s@%s targeting %s@%s", m.Name(), m.Loc(), items[0].Name(), items[0].Loc())
+	} else {
+		direction = Vec{rand.Intn(3)-1, rand.Intn(3)-1}
+		m.log.Printf("%s moving randomly", m.Name())
+	}
+
+	if direction.x != 0 {
+		direction.x = direction.x / IntAbs(direction.x)
+	}
+	if direction.y != 0 {
+		direction.y = direction.y / IntAbs(direction.y)
+	}
+
+	m.log.Printf("%s moving %s", m.Name(), direction)
+
+	return m.MoveOrAct(direction)
 }
 
 func (m *mob) calculateFOV() {
@@ -150,7 +184,7 @@ func (m *mob) die() {
 	corpse.SetColor(termbox.ColorRed)
 	m.AddToInventory(corpse)
 	m.DropItem(corpse, m.dungeon)
-	m.log.Printf("%s dropped %s on death", m, corpse)
+	m.log.Printf("%s dropped %s on death", m.Name(), corpse)
 }
 
 func (m *mob) Dead() bool {
@@ -177,4 +211,21 @@ func (m *mob) Attack(d Defender) (uint, bool) {
 		return damageDealt, true
 	}
 	return 0, false
+}
+
+func (m *mob) MoveOrAct(movement Vec) bool {
+	destination := m.Loc().Add(movement)
+	if otherMob := m.dungeon.MobAt(destination); otherMob != nil {
+		if damageDealt, ok := m.Attack(otherMob); ok {
+			m.log.Printf("%s hit %s for %d damage", m.Name(), otherMob.Name(), damageDealt)
+			if otherMob.Dead() {
+				m.log.Printf("The %s dies!", otherMob.Name())
+			}
+			return true
+		}
+		return false
+	} else if moved := m.dungeon.MoveMob(m, movement); !moved {
+		return false
+	}
+	return true
 }

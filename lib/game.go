@@ -120,7 +120,7 @@ func NewGame(log *log.Logger) (*Game, error) {
 
 	dungeon.ResetFlag(FlagLit | FlagVisible)
 	dungeon.CalculateLighting()
-	dungeon.OnTilesInLineOfSight(game.player.Loc(), game.player.VisionRadius(), func(t *Tile) {
+	dungeon.OnTilesInLineOfSight(game.player.Loc(), game.player.VisionRadius(), func(t *Tile, loc Vec) {
 		if t.Lit() {
 			t.flags |= FlagVisible | FlagSeen
 		}
@@ -160,7 +160,7 @@ func (game *Game) MoveOrAct(movement Vec) bool {
 
 	game.currentDungeon.ResetFlag(FlagLit | FlagVisible)
 	game.currentDungeon.CalculateLighting()
-	game.currentDungeon.OnTilesInLineOfSight(game.player.Loc(), game.player.VisionRadius(), func(t *Tile) {
+	game.currentDungeon.OnTilesInLineOfSight(game.player.Loc(), game.player.VisionRadius(), func(t *Tile, loc Vec) {
 		if t.Lit() {
 			t.flags |= FlagVisible | FlagSeen
 		}
@@ -268,7 +268,7 @@ func (game *Game) WorldTick() {
 	}
 	game.currentDungeon.ResetFlag(FlagLit | FlagVisible)
 	game.currentDungeon.CalculateLighting()
-	game.currentDungeon.OnTilesInLineOfSight(game.player.Loc(), game.player.VisionRadius(), func(t *Tile) {
+	game.currentDungeon.OnTilesInLineOfSight(game.player.Loc(), game.player.VisionRadius(), func(t *Tile, loc Vec) {
 		if t.Lit() {
 			t.flags |= FlagVisible | FlagSeen
 		}

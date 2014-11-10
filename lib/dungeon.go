@@ -349,18 +349,18 @@ var octantMultiplier = [4][8]int{
 // TODO: rewrite based on something with a clear FOSS license, e.g.
 // https://bitbucket.org/munificent/amaranth/src/2fc3311d903f/Amaranth.Engine/Classes/Fov.cs
 func (d *Dungeon) FlagByLineOfSight(origin Vec, radius int, flag Flag) {
-	d.OnTilesInLineOfSight(origin, radius, func(t *Tile) {
+	d.OnTilesInLineOfSight(origin, radius, func(t *Tile, loc Vec) {
 		t.flags |= flag
 	})
 }
 
-type tileFunc func(*Tile)
+type tileFunc func(*Tile, Vec)
 
 func (d *Dungeon) OnTilesInLineOfSight(origin Vec, radius int, do tileFunc) {
 	if radius == 0 {
 		return
 	}
-	do(&d.tiles[origin.y][origin.x])
+	do(&d.tiles[origin.y][origin.x], origin)
 	signal := make(chan bool)
 	for octant := 0; octant < 8; octant++ {
 		go func(origin Vec, radius int, do tileFunc, octant int) {
@@ -420,7 +420,7 @@ func (d *Dungeon) castFlag(
 				t := d.Tile(mapX, mapY)
 				// our light beam is touching this square; flag it:
 				if dx*dx+dy*dy < radiusSquared {
-					do(t)
+					do(t, Vec{mapX, mapY})
 				}
 				if blocked {
 					// we're scanning a row of blocked squares

@@ -13,6 +13,8 @@ type Mob interface {
 	Feature
 	Attacker
 	Defender
+
+	SetVisionRadius(int)
 	VisionRadius() int
 	Move(Vec)
 	Tick(uint) bool
@@ -34,6 +36,8 @@ type mob struct {
 	maxHealth  uint
 	health     uint
 	baseAttack uint
+
+	fov        []Vec
 
 	log *log.Logger
 }
@@ -71,8 +75,21 @@ func (m *mob) Tick(turn uint) bool {
 		m.log.Panicf("%s out of sync! Last ticked: %d, ticking: %d", m, m.lastTicked, turn)
 	}
 	m.lastTicked = turn
+	m.calculateFOV()
 	dx, dy := rand.Intn(3)-1, rand.Intn(3)-1
 	return m.dungeon.MoveMob(m, Vec{dx, dy})
+}
+
+func (m *mob) calculateFOV() {
+	fov := make([]Vec, 0)
+	m.dungeon.OnTilesInLineOfSight(m.loc, m.visionRadius, func(t *Tile, loc Vec){
+		fov = append(fov, loc)
+	})
+	m.fov = fov
+}
+
+func (m *mob) SetVisionRadius(r int) {
+	m.visionRadius = r
 }
 
 func (m *mob) VisionRadius() int {

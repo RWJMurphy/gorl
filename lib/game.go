@@ -108,6 +108,7 @@ func NewGame(log *log.Logger) (*Game, error) {
 			x, y = rand.Intn(dungeon.width), rand.Intn(dungeon.height)
 		}
 		mob := NewMob(fmt.Sprintf("orc #%d", i), 'o', game.log, dungeon)
+		mob.SetVisionRadius(5)
 		mob.SetColor(termbox.ColorGreen)
 		mob.SetLoc(Vec{x, y})
 

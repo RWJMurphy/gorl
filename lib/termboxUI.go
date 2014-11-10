@@ -333,7 +333,7 @@ func (ui *termboxUI) PutRune(loc Vec, r rune) {
 // PrintAt paints a string to the UI, left to right starting at x, y
 func (ui *termboxUI) PrintAt(loc Vec, s string) {
 	for i, r := range s {
-		ui.PutRune(loc.Plus(Vec{i, 0}), r)
+		ui.PutRune(loc.Add(Vec{i, 0}), r)
 	}
 }
 

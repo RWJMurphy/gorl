@@ -144,7 +144,7 @@ func NewGame(log *log.Logger) (*Game, error) {
 //   * if not and destination is Crossable, moves the player there and returns true
 //   * if the destination is not Crossable, returns false
 func (game *Game) MoveOrAct(movement Vec) bool {
-	destination := game.player.Loc().Plus(movement)
+	destination := game.player.Loc().Add(movement)
 	if mob := game.currentDungeon.MobAt(destination); mob != nil {
 		if damageDealt, ok := game.player.Attack(mob); ok {
 			game.AddMessage(fmt.Sprintf("Hit %s for %d damage", mob.Name(), damageDealt))

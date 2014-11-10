@@ -34,13 +34,13 @@ func (camera *cameraWidget) Paint() {
 		color  termbox.Attribute
 	)
 
-	ne := camera.center.Plus(Vec{-camera.widget.Width() / 2, -camera.widget.Height() / 2})
+	ne := camera.center.Add(Vec{-camera.widget.Width() / 2, -camera.widget.Height() / 2})
 
 	for x = 0; x < camera.widget.Width(); x++ {
 		for y = 0; y < camera.widget.Height(); y++ {
 			offset = Vec{x, y}
-			loc = ne.Plus(offset)
-			out = camera.TopLeft().Plus(offset)
+			loc = ne.Add(offset)
+			out = camera.TopLeft().Add(offset)
 			tile = camera.dungeon.Tile(loc.x, loc.y)
 			if tile.Seen() || tile.Visible() {
 				if tile.Visible() {
@@ -77,7 +77,7 @@ type logWidget struct {
 func (lw *logWidget) Paint() {
 	var loc Vec
 	for i, m := range lw.ui.Messages() {
-		loc = lw.TopLeft().Plus(Vec{1, 1 + i})
+		loc = lw.TopLeft().Add(Vec{1, 1 + i})
 		lw.ui.PrintAt(loc, m)
 	}
 	lw.widget.Paint()
@@ -105,11 +105,11 @@ func (iw *inventoryWidget) SetOwner(m Mob) {
 func (iw *inventoryWidget) Paint() {
 	var loc Vec
 	iw.ui.PrintAt(
-		iw.TopLeft().Plus(Vec{1, 1}),
+		iw.TopLeft().Add(Vec{1, 1}),
 		"Inventory",
 	)
 	for i, item := range iw.owner.Inventory() {
-		loc = iw.TopLeft().Plus(Vec{1, 3 + i})
+		loc = iw.TopLeft().Add(Vec{1, 3 + i})
 		iw.ui.PrintAt(loc, fmt.Sprintf("%c) %s", 'a' + i, item.Name()))
 	}
 	iw.widget.Paint()

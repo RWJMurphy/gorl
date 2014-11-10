@@ -7,8 +7,12 @@ type Vec struct {
 	x, y int
 }
 
-func (v Vec) Plus(other Vec) Vec {
+func (v Vec) Add(other Vec) Vec {
 	return Vec{v.x + other.x, v.y + other.y}
+}
+
+func (v Vec) Sub(other Vec) Vec {
+	return Vec{v.x - other.x, v.y - other.y}
 }
 
 func (v Vec) String() string {

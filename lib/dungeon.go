@@ -275,7 +275,7 @@ func (d *Dungeon) DeleteMob(mob Mob) {
 // MoveMob attempts to move mob in the direction move, returning true if
 // successful and false otherwise.
 func (d *Dungeon) MoveMob(mob Mob, move Vec) bool {
-	dest := mob.Loc().Plus(move)
+	dest := mob.Loc().Add(move)
 	if !d.FeatureGroup(dest).Crossable() {
 		return false
 	}

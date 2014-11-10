@@ -22,7 +22,7 @@ func (r Rectangle) TopLeft() Vec {
 }
 
 func (r Rectangle) BottomRight() Vec {
-	return r.topLeft.Plus(r.size).Plus(Vec{-1, -1})
+	return r.topLeft.Add(r.size).Add(Vec{-1, -1})
 }
 
 func (r Rectangle) TopRight() Vec {

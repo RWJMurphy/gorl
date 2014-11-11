@@ -89,6 +89,24 @@ func NewTermboxUI(game *Game) (TermboxUI, error) {
 	return ui, nil
 }
 
+func (ui *termboxUI) Resize() {
+	width, height := termbox.Size()
+
+	ui.cameraWidget.topLeft = Vec{0, 0}
+	ui.cameraWidget.size = Vec{width - width/4, height - height/4}
+
+	ui.menuWidget.topLeft = Vec{width - width/4, 0}
+	ui.menuWidget.size = Vec{width / 4, height - height/4}
+
+	ui.logWidget.topLeft = Vec{0, height - height/4}
+	ui.logWidget.size = Vec{width, height / 4}
+
+	ui.inventoryWidget.topLeft = Vec{0, 0}
+	ui.inventoryWidget.size = Vec{width, height - height/4}
+
+	ui.MarkDirty()
+}
+
 // UI interface implementation
 
 func (ui *termboxUI) Close() {
@@ -278,7 +296,7 @@ func (ui *termboxUI) HandleMovementKey(char rune, key termbox.Key) MobAction {
 func (ui *termboxUI) HandleEvent(e termbox.Event) (MobAction, GameState) {
 	switch e.Type {
 	case termbox.EventResize:
-		ui.MarkDirty()
+		ui.Resize()
 		return MobAction{ActNone, nil}, ui.game.state
 	case termbox.EventKey:
 		return ui.HandleKey(e.Ch, e.Key)

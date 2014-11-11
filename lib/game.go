@@ -152,9 +152,16 @@ func (game *Game) MoveOrAct(mob Mob, movement Vec) bool {
 	destination := mob.Loc().Add(movement)
 	if otherMob := game.currentDungeon.MobAt(destination); otherMob != nil {
 		if damageDealt, ok := mob.Attack(otherMob); ok {
-			game.AddMessage(fmt.Sprintf("%s hit %s for %d damage", mob.Name(), otherMob.Name(), damageDealt))
+			// TODO: Different messages for various visibility combinations?
+			// e.g.
+			// mob otherMob message
+			// 0   0        ""
+			// 0   1        "Something attacks otherMob"
+			// 1   0        "Mob attacks something"
+			// 1   1        "Mob attacks otherMob"
+			game.EmitMessage(mob.Loc(), fmt.Sprintf("%s hit %s for %d damage", mob.Name(), otherMob.Name(), damageDealt))
 			if otherMob.Dead() {
-				game.AddMessage(fmt.Sprintf("The %s dies!", otherMob.Name()))
+				game.EmitMessage(otherMob.Loc(), fmt.Sprintf("The %s dies!", otherMob.Name()))
 			}
 			return true
 		}
@@ -164,6 +171,15 @@ func (game *Game) MoveOrAct(mob Mob, movement Vec) bool {
 	}
 
 	return true
+}
+
+
+func (game *Game) EmitMessage(origin Vec, message string) {
+	if game.currentDungeon.Tile(origin).Visible() {
+		game.AddMessage(message)
+	} else {
+		game.log.Printf("Invisible message emitted from %s: %s", origin, message)
+	}
 }
 
 // AddMessage adds a message to the UI's message buffer for display in the MessageLogWidget
@@ -231,12 +247,12 @@ func (game *Game) doMobAction (mob Mob, action MobAction) bool {
 			return false
 		}
 		mob.DropItem(item, game.currentDungeon)
-		game.AddMessage(fmt.Sprintf("%s dropped %s", mob.Name(), item.Name()))
+		game.EmitMessage(mob.Loc(), fmt.Sprintf("%s dropped %s", mob.Name(), item.Name()))
 		return true
 	case ActDropAll:
 		for _, item := range mob.Inventory() {
 			mob.DropItem(item, game.currentDungeon)
-			game.AddMessage(fmt.Sprintf("%s dropped %s", mob.Name(), item.Name()))
+			game.EmitMessage(mob.Loc(), fmt.Sprintf("%s dropped %s", mob.Name(), item.Name()))
 		}
 		return true
 	case ActPickUpAll:
@@ -245,11 +261,11 @@ func (game *Game) doMobAction (mob Mob, action MobAction) bool {
 			for _, item := range items {
 				game.currentDungeon.DeleteItem(item)
 				mob.AddToInventory(item)
-				game.AddMessage(fmt.Sprintf("%s picked up %s", mob.Name(), item.Name()))
+				game.EmitMessage(mob.Loc(), fmt.Sprintf("%s picked up %s", mob.Name(), item.Name()))
 			}
 			return true
 		} else {
-			game.AddMessage(fmt.Sprintf("Silly %s, there's nothing to pick up.", mob.Name()))
+			game.EmitMessage(mob.Loc(), fmt.Sprintf("Silly %s, there's nothing to pick up.", mob.Name()))
 			return false
 		}
 	case ActMove:

@@ -43,7 +43,7 @@ type UI interface {
 	MarkDirty()
 	IsDirty() bool
 	Paint()
-	DoEvent() (PlayerAction, GameState)
+	DoEvent() (MobAction, GameState)
 
 	PointCameraAt(*Dungeon, Vec)
 

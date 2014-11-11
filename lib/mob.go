@@ -17,19 +17,21 @@ type Mob interface {
 	SetVisionRadius(int)
 	VisionRadius() int
 	Move(Vec)
-	Tick(uint) bool
+	Tick(uint) MobAction
 
 	Inventory() []Item
 	AddToInventory(Item) bool
 	DropItem(Item, *Dungeon) bool
 	RemoveFromInventory(Item) bool
+
+	MoveOrAct(Vec) bool
 }
 
 type mob struct {
 	feature
 	visionRadius int
 	inventory    []Item
-	// BUG I expect this will come out of sync. Head's up, future Reed.
+	// XXX I expect this will come out of sync. Head's up, future Reed.
 	dungeon    *Dungeon
 	lastTicked uint
 
@@ -67,15 +69,16 @@ func (m *mob) String() string {
 	)
 }
 
-func (m *mob) Tick(turn uint) bool {
+func (m *mob) Tick(turn uint) MobAction {
+	action := MobAction{ActNone, nil}
 	if m.Dead() {
-		return false
+		return action
 	}
 	if m.lastTicked != turn-1 {
 		m.log.Panicf("%s out of sync! Last ticked: %d, ticking: %d", m, m.lastTicked, turn)
+		return action
 	}
 	m.lastTicked = turn
-
 	m.calculateFOV()
 	var enemies, items []Feature
 
@@ -108,10 +111,11 @@ func (m *mob) Tick(turn uint) bool {
 	if direction.y != 0 {
 		direction.y = direction.y / IntAbs(direction.y)
 	}
+	action.action = ActMove
+	action.target = direction
 
 	m.log.Printf("%s moving %s", m.Name(), direction)
-
-	return m.MoveOrAct(direction)
+	return action
 }
 
 func (m *mob) calculateFOV() {

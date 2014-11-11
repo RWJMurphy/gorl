@@ -34,7 +34,7 @@ const (
 	ActPickUpAll
 )
 
-type PlayerAction struct {
+type MobAction struct {
 	action playerAction
 	target interface{}
 }
@@ -119,46 +119,20 @@ func NewGame(log *log.Logger) (*Game, error) {
 		dungeon.AddMob(mob)
 	}
 
-	dungeon.ResetFlag(FlagLit | FlagVisible)
-	dungeon.CalculateLighting()
-	dungeon.OnTilesInLineOfSight(game.player.Loc(), game.player.VisionRadius(), func(t *Tile, loc Vec) {
-		if t.Lit() {
-			t.flags |= FlagVisible | FlagSeen
-		}
-	})
-
 	ui, err := NewTermboxUI(game)
 	if err != nil {
 		return nil, err
 	}
 	game.ui = ui
 	game.SetDungeon(dungeon)
+	game.updatePlayerFOV()
 
 	game.AddMessage("Welcome to GoRL!")
 	game.state = GamePlayerTurn
 	return game, nil
 }
 
-// MoveOrAct calculates the destination tile based on the movement parameter and
-// the Player's location, and then
-//   * if there is a mob on the destination, attacks the mob and returns true
-//   * if not and destination is Crossable, moves the player there and returns true
-//   * if the destination is not Crossable, returns false
-func (game *Game) MoveOrAct(movement Vec) bool {
-	destination := game.player.Loc().Add(movement)
-	if mob := game.currentDungeon.MobAt(destination); mob != nil {
-		if damageDealt, ok := game.player.Attack(mob); ok {
-			game.AddMessage(fmt.Sprintf("Hit %s for %d damage", mob.Name(), damageDealt))
-			if mob.Dead() {
-				game.AddMessage(fmt.Sprintf("The %s dies!", mob.Name()))
-			}
-			return true
-		}
-		return false
-	} else if moved := game.currentDungeon.MoveMob(game.player, movement); !moved {
-		return moved
-	}
-
+func (game *Game) updatePlayerFOV() {
 	game.currentDungeon.ResetFlag(FlagLit | FlagVisible)
 	game.currentDungeon.CalculateLighting()
 	game.currentDungeon.OnTilesInLineOfSight(game.player.Loc(), game.player.VisionRadius(), func(t *Tile, loc Vec) {
@@ -166,9 +140,29 @@ func (game *Game) MoveOrAct(movement Vec) bool {
 			t.flags |= FlagVisible | FlagSeen
 		}
 	})
+}
 
-	game.ui.PointCameraAt(game.currentDungeon, game.player.Loc())
-	game.ui.MarkDirty()
+// MoveOrAct calculates the destination tile based on the movement parameter and
+// the Player's location, and then
+//   * if there is a mob on the destination, attacks the mob and returns true
+//   * if not and destination is Crossable, moves the player there and returns true
+//   * if the destination is not Crossable, returns false
+func (game *Game) MoveOrAct(mob Mob, movement Vec) bool {
+	game.log.Printf("%s MoveOrAct'ing %s", mob, movement)
+	destination := mob.Loc().Add(movement)
+	if otherMob := game.currentDungeon.MobAt(destination); otherMob != nil {
+		if damageDealt, ok := mob.Attack(otherMob); ok {
+			game.AddMessage(fmt.Sprintf("%s hit %s for %d damage", mob.Name(), otherMob.Name(), damageDealt))
+			if otherMob.Dead() {
+				game.AddMessage(fmt.Sprintf("The %s dies!", otherMob.Name()))
+			}
+			return true
+		}
+		return false
+	} else if moved := game.currentDungeon.MoveMob(mob, movement); !moved {
+		return moved
+	}
+
 	return true
 }
 
@@ -192,54 +186,25 @@ func (game *Game) Run() {
 
 // MainLoop is the Game's main loop. Ticks the UI until it closes.
 func (game *Game) MainLoop() {
-	var action PlayerAction
+	var action MobAction
 	nextState := game.state
 
 	game.ui.Paint()
 	game.log.Println("Entering main loop")
 mainLoop:
 	for {
+		game.log.Printf("Game state: %s", game.state)
 		switch game.state {
 		case GameWorldTurn:
 			game.WorldTick()
 			nextState = GamePlayerTurn
 		case GamePlayerTurn:
 			action, nextState = game.ui.DoEvent()
-
-			switch action.action {
-			case ActWait:
-				nextState = GameWorldTurn
-			case ActDrop:
-				item := action.target.(Item)
-				game.player.DropItem(item, game.currentDungeon)
-				game.AddMessage(fmt.Sprintf("Dropped %s", item.Name()))
-			case ActDropAll:
-				for _, item := range game.player.Inventory() {
-					game.player.DropItem(item, game.currentDungeon)
-					game.AddMessage(fmt.Sprintf("Dropped %s", item.Name()))
-				}
-			case ActPickUpAll:
-				items := game.currentDungeon.ItemsAt(game.player.Loc())
-				game.log.Printf("Attempting to pick up items: %s", items)
-				if len(items) > 0 {
-					for _, item := range items {
-						game.log.Printf("Player picking up %s", item)
-						game.currentDungeon.DeleteItem(item)
-						game.player.AddToInventory(item)
-						game.AddMessage(fmt.Sprintf("Picked up %s", item.Name()))
-					}
-				} else {
-					game.AddMessage("Nothing to pick up.")
-					nextState = game.state
-				}
-			case ActMove:
-				direction := action.target.(Vec)
-				if !game.MoveOrAct(direction) {
-					nextState = GamePlayerTurn
-				}
-			case ActNone:
-			default:
-				log.Panicf("Bad action: %s", action)
+			if game.doMobAction(game.player, action) {
+				game.state = nextState
+				game.ui.PointCameraAt(game.currentDungeon, game.player.Loc())
+				game.updatePlayerFOV()
+				game.ui.MarkDirty()
 			}
 		case GameClosed:
 			break mainLoop
@@ -255,25 +220,65 @@ mainLoop:
 	}
 }
 
+func (game *Game) doMobAction (mob Mob, action MobAction) bool {
+	switch action.action {
+	case ActWait:
+		return true
+	case ActDrop:
+		item := action.target.(Item)
+		if item == nil {
+			game.log.Panicf("%s tried to drop nil!", mob)
+			return false
+		}
+		mob.DropItem(item, game.currentDungeon)
+		game.AddMessage(fmt.Sprintf("%s dropped %s", mob.Name(), item.Name()))
+		return true
+	case ActDropAll:
+		for _, item := range mob.Inventory() {
+			mob.DropItem(item, game.currentDungeon)
+			game.AddMessage(fmt.Sprintf("%s dropped %s", mob.Name(), item.Name()))
+		}
+		return true
+	case ActPickUpAll:
+		items := game.currentDungeon.ItemsAt(mob.Loc())
+		if len(items) > 0 {
+			for _, item := range items {
+				game.currentDungeon.DeleteItem(item)
+				mob.AddToInventory(item)
+				game.AddMessage(fmt.Sprintf("%s picked up %s", mob.Name(), item.Name()))
+			}
+			return true
+		} else {
+			game.AddMessage(fmt.Sprintf("Silly %s, there's nothing to pick up.", mob.Name()))
+			return false
+		}
+	case ActMove:
+		direction := action.target.(Vec)
+		return game.MoveOrAct(mob, direction)
+	case ActNone:
+		return false
+	default:
+		log.Panicf("Bad action: %s, %s", mob, action)
+		return false
+	}
+	return false
+}
+
 // WorldTick runs a single turn of the game engine
 func (game *Game) WorldTick() {
 	tickStartTime := time.Now()
 	game.turn++
 	game.log.Printf("Game tick: %d", game.turn)
 	changed := false
-	for _, m := range game.currentDungeon.Mobs() {
-		changed = m.Tick(game.turn) || changed
+	var mobAction MobAction
+	for _, mob := range game.currentDungeon.Mobs() {
+		mobAction = mob.Tick(game.turn)
+		changed = game.doMobAction(mob, mobAction) || changed
 	}
 	if changed {
 		game.ui.MarkDirty()
 	}
-	game.currentDungeon.ResetFlag(FlagLit | FlagVisible)
-	game.currentDungeon.CalculateLighting()
-	game.currentDungeon.OnTilesInLineOfSight(game.player.Loc(), game.player.VisionRadius(), func(t *Tile, loc Vec) {
-		if t.Lit() {
-			t.flags |= FlagVisible | FlagSeen
-		}
-	})
+	game.updatePlayerFOV()
 
 	tickRunTime := time.Now().Sub(tickStartTime)
 	game.log.Printf("Tick took %v to run", tickRunTime)

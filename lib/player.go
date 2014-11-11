@@ -28,7 +28,9 @@ func NewPlayer(log *log.Logger, dungeon *Dungeon) Player {
 	return p
 }
 
-func (p *player) Tick(turn uint) bool {
+// XXX Should I move input handling here? Or does that couple the Player
+// to the UI too closely? Argh.
+func (p *player) Tick(turn uint) MobAction {
 	p.lastTicked = turn
-	return false
+	return MobAction{ActNone, nil}
 }

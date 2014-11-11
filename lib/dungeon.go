@@ -79,6 +79,14 @@ type FeatureGroup struct {
 	feature Feature
 }
 
+func (f FeatureGroup) String() string {
+	return fmt.Sprintf("<FeatureGroup mob:%s items:%s feature:%s>",
+		f.mob,
+		f.items,
+		f.feature,
+	)
+}
+
 func (f *FeatureGroup) Each() []Feature {
 	var fs []Feature
 	if f.mob != nil {
@@ -275,6 +283,7 @@ func (d *Dungeon) DeleteMob(mob Mob) {
 // MoveMob attempts to move mob in the direction move, returning true if
 // successful and false otherwise.
 func (d *Dungeon) MoveMob(mob Mob, move Vec) bool {
+	d.log.Printf("%s moving %s", mob, move)
 	dest := mob.Loc().Add(move)
 	if !d.FeatureGroup(dest).Crossable() {
 		return false

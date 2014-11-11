@@ -30,7 +30,7 @@ type termboxUI struct {
 	dirty           bool
 	log             *log.Logger
 	// ugh this is hacky
-	stateAction     PlayerAction
+	stateAction     MobAction
 }
 
 func NewTermboxUI(game *Game) (TermboxUI, error) {
@@ -85,7 +85,7 @@ func NewTermboxUI(game *Game) (TermboxUI, error) {
 		game.player,
 	}
 	ui.MarkDirty()
-	ui.setState(StateGame, PlayerAction{ActNone, nil})
+	ui.setState(StateGame, MobAction{ActNone, nil})
 	return ui, nil
 }
 
@@ -111,8 +111,8 @@ func (ui *termboxUI) State() State {
 	return ui.state
 }
 
-func (ui *termboxUI) DoEvent() (PlayerAction, GameState) {
-	action := PlayerAction{ActNone, nil}
+func (ui *termboxUI) DoEvent() (MobAction, GameState) {
+	action := MobAction{ActNone, nil}
 	nextState := ui.game.state
 
 	switch ui.State() {
@@ -159,13 +159,15 @@ func (ui *termboxUI) Paint() {
 // TermboxUI implementation
 
 // HandleKey handles a termbox.KeyEvent
-func (ui *termboxUI) HandleKey(char rune, key termbox.Key) (PlayerAction, GameState) {
+//
+// XXX I really dislike how coupled this is to GameState :(
+func (ui *termboxUI) HandleKey(char rune, key termbox.Key) (MobAction, GameState) {
 	switch ui.State() {
 	case StateGame:
 		switch char {
 		// Quit
 		case 'q':
-			return PlayerAction{ActNone, nil}, GameClosed
+			return MobAction{ActNone, nil}, GameClosed
 		// Move
 		case 'h', 'j', 'k', 'l', 'y', 'u', 'b', 'n':
 			action := ui.HandleMovementKey(char, key)
@@ -174,25 +176,25 @@ func (ui *termboxUI) HandleKey(char rune, key termbox.Key) (PlayerAction, GameSt
 			}
 			return action, ui.game.state
 		case 'i':
-			ui.setState(StateInventory, PlayerAction{ActNone, nil})
-			return PlayerAction{ActNone, nil}, GamePlayerTurn
+			ui.setState(StateInventory, MobAction{ActNone, nil})
+			return MobAction{ActNone, nil}, GamePlayerTurn
 		// Drop
 		case 'd':
-			ui.setState(StateInventory, PlayerAction{ActDrop, nil})
-			return PlayerAction{ActNone, nil}, GamePlayerTurn
+			ui.setState(StateInventory, MobAction{ActDrop, nil})
+			return MobAction{ActNone, nil}, GamePlayerTurn
 		// Drop all
 		case 'D':
-			return PlayerAction{ActDropAll, nil}, GameWorldTurn
+			return MobAction{ActDropAll, nil}, GameWorldTurn
 		case ',', 'g':
-			return PlayerAction{ActPickUpAll, nil}, GameWorldTurn
+			return MobAction{ActPickUpAll, nil}, GameWorldTurn
 		case 0:
 			switch key {
 			// Quit
 			case termbox.KeyCtrlC, termbox.KeyEsc:
-				return PlayerAction{ActNone, nil}, GameClosed
+				return MobAction{ActNone, nil}, GameClosed
 			// Wait
 			case termbox.KeySpace:
-				return PlayerAction{ActWait, nil}, GameWorldTurn
+				return MobAction{ActWait, nil}, GameWorldTurn
 			// Move
 			case termbox.KeyArrowUp, termbox.KeyArrowRight, termbox.KeyArrowDown, termbox.KeyArrowLeft:
 				action := ui.HandleMovementKey(char, key)
@@ -209,15 +211,15 @@ func (ui *termboxUI) HandleKey(char rune, key termbox.Key) (PlayerAction, GameSt
 			if inventoryIndex >= 0 &&  inventoryIndex < len(inventory) {
 				stateAction := ui.stateAction
 				stateAction.target = inventory[inventoryIndex]
-				ui.setState(StateGame, PlayerAction{ActNone, nil})
+				ui.setState(StateGame, MobAction{ActNone, nil})
 				return stateAction, GameWorldTurn
 			}
-			return PlayerAction{ActNone, nil}, ui.game.state
+			return MobAction{ActNone, nil}, ui.game.state
 		}
 		switch key {
 		case termbox.KeyEsc:
-			ui.setState(StateGame, PlayerAction{ActNone, nil})
-			return PlayerAction{ActNone, nil}, ui.game.state
+			ui.setState(StateGame, MobAction{ActNone, nil})
+			return MobAction{ActNone, nil}, ui.game.state
 		}
 	case StateClosed:
 		ui.log.Panic("am closed, can't handle keys :(")
@@ -227,12 +229,12 @@ func (ui *termboxUI) HandleKey(char rune, key termbox.Key) (PlayerAction, GameSt
 	} else {
 		ui.game.AddMessage(fmt.Sprintf("Unhandled key: %c", char))
 	}
-	return PlayerAction{ActNone, nil}, ui.game.state
+	return MobAction{ActNone, nil}, ui.game.state
 }
 
 // HandleMovementKey maps a key to its respective Vec, and passes it
 // to Game.Move. Returns true if the move was successful.
-func (ui *termboxUI) HandleMovementKey(char rune, key termbox.Key) PlayerAction {
+func (ui *termboxUI) HandleMovementKey(char rune, key termbox.Key) MobAction {
 	var movement Vec
 	switch char {
 	case 'k':
@@ -263,31 +265,31 @@ func (ui *termboxUI) HandleMovementKey(char rune, key termbox.Key) PlayerAction 
 			movement = MoveWest
 		default:
 			ui.log.Panicf("Not a movement key: %s", string(key))
-			return PlayerAction{ActNone, nil}
+			return MobAction{ActNone, nil}
 		}
 	default:
 		ui.log.Panicf("Not a movement key: %c", char)
-		return PlayerAction{ActNone, nil}
+		return MobAction{ActNone, nil}
 	}
-	return PlayerAction{ActMove, movement}
+	return MobAction{ActMove, movement}
 }
 
 // HandleEvent handles a termbox.Event
-func (ui *termboxUI) HandleEvent(e termbox.Event) (PlayerAction, GameState) {
+func (ui *termboxUI) HandleEvent(e termbox.Event) (MobAction, GameState) {
 	switch e.Type {
 	case termbox.EventResize:
 		ui.MarkDirty()
-		return PlayerAction{ActNone, nil}, ui.game.state
+		return MobAction{ActNone, nil}, ui.game.state
 	case termbox.EventKey:
 		return ui.HandleKey(e.Ch, e.Key)
 	case termbox.EventError:
 		ui.log.Panic(e.Err)
 	}
 	ui.log.Panicf("Unhandled event: %s", e)
-	return PlayerAction{ActNone, nil}, GameInvalidState
+	return MobAction{ActNone, nil}, GameInvalidState
 }
 
-func (ui *termboxUI) setState(state State, stateAction PlayerAction) {
+func (ui *termboxUI) setState(state State, stateAction MobAction) {
 	ui.log.Printf("termboxUI state change: %s -> %s", ui.state, state)
 	ui.log.Printf("state expects action: %s", stateAction)
 	ui.stateAction = stateAction

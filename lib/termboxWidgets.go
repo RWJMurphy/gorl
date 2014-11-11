@@ -41,7 +41,7 @@ func (camera *cameraWidget) Paint() {
 			offset = Vec{x, y}
 			loc = ne.Add(offset)
 			out = camera.TopLeft().Add(offset)
-			tile = camera.dungeon.Tile(loc.x, loc.y)
+			tile = camera.dungeon.Tile(loc)
 			if tile.Seen() || tile.Visible() {
 				if tile.Visible() {
 					fg := camera.dungeon.FeatureGroup(loc)

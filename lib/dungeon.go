@@ -288,7 +288,7 @@ func (d *Dungeon) MoveMob(mob Mob, move Vec) bool {
 	if !d.FeatureGroup(dest).Crossable() {
 		return false
 	}
-	if !d.Tile(dest.x, dest.y).Crossable() {
+	if !d.Tile(dest).Crossable() {
 		return false
 	}
 	d.DeleteMob(mob)
@@ -426,7 +426,7 @@ func (d *Dungeon) castFlag(
 			} else if endSlope > leftSlope {
 				break
 			} else {
-				t := d.Tile(mapX, mapY)
+				t := d.Tile(Vec{mapX, mapY})
 				// our light beam is touching this square; flag it:
 				if dx*dx+dy*dy < radiusSquared {
 					do(t, Vec{mapX, mapY})
@@ -457,12 +457,12 @@ func (d *Dungeon) castFlag(
 }
 
 // Tile fetches the Dungeon Tile at (x, y)
-func (d *Dungeon) Tile(x, y int) *Tile {
-	if x < 0 || x >= d.width || y < 0 || y >= d.height {
+func (d *Dungeon) Tile(loc Vec) *Tile {
+	if loc.x < 0 || loc.x >= d.width || loc.y < 0 || loc.y >= d.height {
 		t := InvalidTile
 		return &t
 	}
-	return &d.tiles[y][x]
+	return &d.tiles[loc.y][loc.x]
 }
 
 // Crossable returns true if the Tile can be moved across

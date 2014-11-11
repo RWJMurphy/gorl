@@ -103,14 +103,14 @@ func NewGame(log *log.Logger) (*Game, error) {
 	dungeon.AddMob(game.player)
 
 	for i := 0; i < 10; i++ {
-		x, y := rand.Intn(dungeon.width), rand.Intn(dungeon.height)
-		for !(dungeon.Tile(x, y).Crossable() && dungeon.FeatureGroup(Vec{x, y}).Crossable()) {
-			x, y = rand.Intn(dungeon.width), rand.Intn(dungeon.height)
+		dest := Vec{rand.Intn(dungeon.width), rand.Intn(dungeon.height)}
+		for !(dungeon.Tile(dest).Crossable() && dungeon.FeatureGroup(dest).Crossable()) {
+			dest = Vec{rand.Intn(dungeon.width), rand.Intn(dungeon.height)}
 		}
 		mob := NewMob(fmt.Sprintf("orc #%d", i), 'o', game.log, dungeon)
 		mob.SetVisionRadius(5)
 		mob.SetColor(termbox.ColorGreen)
-		mob.SetLoc(Vec{x, y})
+		mob.SetLoc(dest)
 
 		torch := NewItem("torch", '!', 1)
 		torch.SetLightRadius(10)

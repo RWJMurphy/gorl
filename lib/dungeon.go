@@ -73,6 +73,9 @@ func NewTile(c rune, color termbox.Attribute, flags Flag) Tile {
 // otherwise not considered "valid".
 var InvalidTile = Tile{' ', termbox.ColorBlack, Flag(0) | FlagBlocksLight}
 
+// XXX Should a FeatureGroup be an aspect / member of a Tile? Perhaps a Tile
+// is better thought of as all information about that location in a Dungeon,
+// rather than just the floor / wall itself. Hm.
 type FeatureGroup struct {
 	mob     Mob
 	items   []Item

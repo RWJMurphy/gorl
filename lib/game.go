@@ -110,7 +110,7 @@ func NewGame(log *log.Logger) (*Game, error) {
 			dest = Vector{rand.Intn(dungeon.width), rand.Intn(dungeon.height)}
 		}
 		mob := NewMob(fmt.Sprintf("orc #%d", i), 'o', game.log, dungeon)
-		mob.SetVisionRadius(5)
+		mob.SetVisionRadius(100)
 		mob.SetColor(termbox.ColorGreen)
 		mob.SetLoc(dest)
 
@@ -218,11 +218,14 @@ mainLoop:
 			nextState = GamePlayerTurn
 		case GamePlayerTurn:
 			action, nextState = game.ui.DoEvent()
-			if game.doMobAction(game.player, action) {
-				game.state = nextState
-				game.ui.PointCameraAt(game.currentDungeon, game.player.Loc())
-				game.updatePlayerFOV()
-				game.ui.MarkDirty()
+			if nextState != GameClosed {
+				if game.doMobAction(game.player, action) {
+					game.ui.PointCameraAt(game.currentDungeon, game.player.Loc())
+					game.updatePlayerFOV()
+					game.ui.MarkDirty()
+				} else {
+					nextState = GamePlayerTurn
+				}
 			}
 		case GameClosed:
 			break mainLoop

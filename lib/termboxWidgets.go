@@ -19,26 +19,26 @@ func (w *widget) Paint() {
 type cameraWidget struct {
 	widget
 	dungeon *Dungeon
-	center  Vec
+	center  Vector
 }
 
 // Paint paints the cameraWidget to the TermboxUI
 func (camera *cameraWidget) Paint() {
 	var (
 		tile   *Tile
-		offset Vec
-		loc    Vec
-		out    Vec
+		offset Vector
+		loc    Vector
+		out    Vector
 		x, y   int
 		char   rune
 		color  termbox.Attribute
 	)
 
-	ne := camera.center.Add(Vec{-camera.widget.Width() / 2, -camera.widget.Height() / 2})
+	ne := camera.center.Add(Vector{-camera.widget.Width() / 2, -camera.widget.Height() / 2})
 
 	for x = 0; x < camera.widget.Width(); x++ {
 		for y = 0; y < camera.widget.Height(); y++ {
-			offset = Vec{x, y}
+			offset = Vector{x, y}
 			loc = ne.Add(offset)
 			out = camera.TopLeft().Add(offset)
 			tile = camera.dungeon.Tile(loc)
@@ -75,9 +75,9 @@ type logWidget struct {
 
 // Paint paints the logWidget to the TermboxUI
 func (lw *logWidget) Paint() {
-	var loc Vec
+	var loc Vector
 	for i, m := range lw.ui.Messages() {
-		loc = lw.TopLeft().Add(Vec{1, 1 + i})
+		loc = lw.TopLeft().Add(Vector{1, 1 + i})
 		lw.ui.PrintAt(loc, m)
 	}
 	lw.widget.Paint()
@@ -103,13 +103,13 @@ func (iw *inventoryWidget) SetOwner(m Mob) {
 }
 
 func (iw *inventoryWidget) Paint() {
-	var loc Vec
+	var loc Vector
 	iw.ui.PrintAt(
-		iw.TopLeft().Add(Vec{1, 1}),
+		iw.TopLeft().Add(Vector{1, 1}),
 		"Inventory",
 	)
 	for i, item := range iw.owner.Inventory() {
-		loc = iw.TopLeft().Add(Vec{1, 3 + i})
+		loc = iw.TopLeft().Add(Vector{1, 3 + i})
 		iw.ui.PrintAt(loc, fmt.Sprintf("%c) %s", 'a' + i, item.Name()))
 	}
 	iw.widget.Paint()

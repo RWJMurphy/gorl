@@ -13,9 +13,9 @@ type TermboxUI interface {
 
 	Messages() []string
 	PaintBorder(RectangleI, boxStyle)
-	PutRuneColor(Vec, rune, termbox.Attribute, termbox.Attribute)
-	PrintAt(Vec, string)
-	PutRune(Vec, rune)
+	PutRuneColor(Vector, rune, termbox.Attribute, termbox.Attribute)
+	PrintAt(Vector, string)
+	PutRune(Vector, rune)
 }
 
 type termboxUI struct {
@@ -47,8 +47,8 @@ func NewTermboxUI(game *Game) (TermboxUI, error) {
 	ui.logWidget = &logWidget{
 		widget{
 			Rectangle{
-				Vec{0, height - height/4},
-				Vec{width, height / 4},
+				Vector{0, height - height/4},
+				Vector{width, height / 4},
 			},
 			ui,
 		},
@@ -57,19 +57,19 @@ func NewTermboxUI(game *Game) (TermboxUI, error) {
 	ui.cameraWidget = &cameraWidget{
 		widget{
 			Rectangle{
-				Vec{0, 0},
-				Vec{width - width/4, height - height/4},
+				Vector{0, 0},
+				Vector{width - width/4, height - height/4},
 			},
 			ui,
 		},
 		nil,
-		Vec{0, 0},
+		Vector{0, 0},
 	}
 	ui.menuWidget = &menuWidget{
 		widget{
 			Rectangle{
-				Vec{width - width/4, 0},
-				Vec{width / 4, height - height/4},
+				Vector{width - width/4, 0},
+				Vector{width / 4, height - height/4},
 			},
 			ui,
 		},
@@ -77,8 +77,8 @@ func NewTermboxUI(game *Game) (TermboxUI, error) {
 	ui.inventoryWidget = &inventoryWidget{
 		widget{
 			Rectangle{
-				Vec{0, 0},
-				Vec{width, height - height/4},
+				Vector{0, 0},
+				Vector{width, height - height/4},
 			},
 			ui,
 		},
@@ -92,17 +92,17 @@ func NewTermboxUI(game *Game) (TermboxUI, error) {
 func (ui *termboxUI) Resize() {
 	width, height := termbox.Size()
 
-	ui.cameraWidget.topLeft = Vec{0, 0}
-	ui.cameraWidget.size = Vec{width - width/4, height - height/4}
+	ui.cameraWidget.topLeft = Vector{0, 0}
+	ui.cameraWidget.size = Vector{width - width/4, height - height/4}
 
-	ui.menuWidget.topLeft = Vec{width - width/4, 0}
-	ui.menuWidget.size = Vec{width / 4, height - height/4}
+	ui.menuWidget.topLeft = Vector{width - width/4, 0}
+	ui.menuWidget.size = Vector{width / 4, height - height/4}
 
-	ui.logWidget.topLeft = Vec{0, height - height/4}
-	ui.logWidget.size = Vec{width, height / 4}
+	ui.logWidget.topLeft = Vector{0, height - height/4}
+	ui.logWidget.size = Vector{width, height / 4}
 
-	ui.inventoryWidget.topLeft = Vec{0, 0}
-	ui.inventoryWidget.size = Vec{width, height - height/4}
+	ui.inventoryWidget.topLeft = Vector{0, 0}
+	ui.inventoryWidget.size = Vector{width, height - height/4}
 
 	ui.MarkDirty()
 }
@@ -146,7 +146,7 @@ func (ui *termboxUI) DoEvent() (MobAction, GameState) {
 }
 
 // PointCameraAt sets the dungeon and center for the CameraWidget
-func (ui *termboxUI) PointCameraAt(d *Dungeon, c Vec) {
+func (ui *termboxUI) PointCameraAt(d *Dungeon, c Vector) {
 	ui.cameraWidget.dungeon = d
 	ui.cameraWidget.center = c
 }
@@ -250,10 +250,10 @@ func (ui *termboxUI) HandleKey(char rune, key termbox.Key) (MobAction, GameState
 	return MobAction{ActNone, nil}, ui.game.state
 }
 
-// HandleMovementKey maps a key to its respective Vec, and passes it
+// HandleMovementKey maps a key to its respective Vector, and passes it
 // to Game.Move. Returns true if the move was successful.
 func (ui *termboxUI) HandleMovementKey(char rune, key termbox.Key) MobAction {
-	var movement Vec
+	var movement Vector
 	switch char {
 	case 'k':
 		movement = MoveNorth
@@ -341,19 +341,19 @@ func (ui *termboxUI) Messages() []string {
 
 // PutRuneColor paints the rune r at position x, y with foreground color fg and
 // background bg.
-func (ui *termboxUI) PutRuneColor(loc Vec, r rune, fg, bg termbox.Attribute) {
+func (ui *termboxUI) PutRuneColor(loc Vector, r rune, fg, bg termbox.Attribute) {
 	termbox.SetCell(loc.x, loc.y, r, fg, bg)
 }
 
 // PutRune paints the rune r at positions x, y in the default colors.
-func (ui *termboxUI) PutRune(loc Vec, r rune) {
+func (ui *termboxUI) PutRune(loc Vector, r rune) {
 	ui.PutRuneColor(loc, r, termbox.ColorDefault, termbox.ColorDefault)
 }
 
 // PrintAt paints a string to the UI, left to right starting at x, y
-func (ui *termboxUI) PrintAt(loc Vec, s string) {
+func (ui *termboxUI) PrintAt(loc Vector, s string) {
 	for i, r := range s {
-		ui.PutRune(loc.Add(Vec{i, 0}), r)
+		ui.PutRune(loc.Add(Vector{i, 0}), r)
 	}
 }
 
@@ -372,7 +372,7 @@ func (ui *termboxUI) PaintBox(rect RectangleI, r rune) {
 
 	for x := x1; x <= x2; x++ {
 		for y := y1; y <= y2; y++ {
-			ui.PutRune(Vec{x, y}, r)
+			ui.PutRune(Vector{x, y}, r)
 		}
 	}
 }
@@ -393,11 +393,11 @@ func (ui *termboxUI) PaintBorder(rect RectangleI, style boxStyle) {
 		ui.log.Panic(err)
 	}
 
-	ui.PaintBox(Rectangle{Vec{x1 + 1, y1}, Vec{rect.Width() - 2, 1}}, style.horizontal)
-	ui.PaintBox(Rectangle{Vec{x1 + 1, y2}, Vec{rect.Width() - 2, 1}}, style.horizontal)
+	ui.PaintBox(Rectangle{Vector{x1 + 1, y1}, Vector{rect.Width() - 2, 1}}, style.horizontal)
+	ui.PaintBox(Rectangle{Vector{x1 + 1, y2}, Vector{rect.Width() - 2, 1}}, style.horizontal)
 
-	ui.PaintBox(Rectangle{Vec{x1, y1 + 1}, Vec{1, rect.Height() - 2}}, style.vertical)
-	ui.PaintBox(Rectangle{Vec{x2, y1 + 1}, Vec{1, rect.Height() - 2}}, style.vertical)
+	ui.PaintBox(Rectangle{Vector{x1, y1 + 1}, Vector{1, rect.Height() - 2}}, style.vertical)
+	ui.PaintBox(Rectangle{Vector{x2, y1 + 1}, Vector{1, rect.Height() - 2}}, style.vertical)
 
 	ui.PutRune(rect.TopLeft(), style.corner)
 	ui.PutRune(rect.TopRight(), style.corner)

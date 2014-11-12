@@ -2,19 +2,19 @@ package gorl
 
 import "fmt"
 
-// A Vec is a pair of x, y values.
-type Vec struct {
+// A Vector is a pair of x, y values.
+type Vector struct {
 	x, y int
 }
 
-func (v Vec) Add(other Vec) Vec {
-	return Vec{v.x + other.x, v.y + other.y}
+func (v Vector) String() string {
+	return fmt.Sprintf("<Vector x:%d, y:%d>", v.x, v.y)
 }
 
-func (v Vec) Sub(other Vec) Vec {
-	return Vec{v.x - other.x, v.y - other.y}
+func (v Vector) Add(other Vector) Vector {
+	return Vector{v.x + other.x, v.y + other.y}
 }
 
-func (v Vec) String() string {
-	return fmt.Sprintf("<Vec x:%d, y:%d>", v.x, v.y)
+func (v Vector) Sub(other Vector) Vector {
+	return Vector{v.x - other.x, v.y - other.y}
 }

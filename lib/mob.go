@@ -16,7 +16,7 @@ type Mob interface {
 
 	SetVisionRadius(int)
 	VisionRadius() int
-	Move(Vec)
+	Move(Vector)
 	Tick(uint) MobAction
 
 	Inventory() []Item
@@ -24,7 +24,7 @@ type Mob interface {
 	DropItem(Item, *Dungeon) bool
 	RemoveFromInventory(Item) bool
 
-	MoveOrAct(Vec) bool
+	MoveOrAct(Vector) bool
 }
 
 type mob struct {
@@ -39,7 +39,7 @@ type mob struct {
 	health     uint
 	baseAttack uint
 
-	fov        []Vec
+	fov        []Vector
 
 	log *log.Logger
 }
@@ -93,7 +93,7 @@ func (m *mob) Tick(turn uint) MobAction {
 			}
 		}
 	}
-	var direction Vec
+	var direction Vector
 	if len(enemies) > 0 {
 		direction = enemies[0].Loc().Sub(m.Loc())
 		m.log.Printf("%s@%s targeting %s@%s", m.Name(), m.Loc(), enemies[0].Name(), enemies[0].Loc())
@@ -101,7 +101,7 @@ func (m *mob) Tick(turn uint) MobAction {
 		direction = items[0].Loc().Sub(m.Loc())
 		m.log.Printf("%s@%s targeting %s@%s", m.Name(), m.Loc(), items[0].Name(), items[0].Loc())
 	} else {
-		direction = Vec{rand.Intn(3)-1, rand.Intn(3)-1}
+		direction = Vector{rand.Intn(3)-1, rand.Intn(3)-1}
 		m.log.Printf("%s moving randomly", m.Name())
 	}
 
@@ -119,8 +119,8 @@ func (m *mob) Tick(turn uint) MobAction {
 }
 
 func (m *mob) calculateFOV() {
-	fov := make([]Vec, 0)
-	m.dungeon.OnTilesInLineOfSight(m.loc, m.visionRadius, func(t *Tile, loc Vec){
+	fov := make([]Vector, 0)
+	m.dungeon.OnTilesInLineOfSight(m.loc, m.visionRadius, func(t *Tile, loc Vector){
 		fov = append(fov, loc)
 	})
 	m.fov = fov
@@ -134,7 +134,7 @@ func (m *mob) VisionRadius() int {
 	return m.visionRadius
 }
 
-func (m *mob) Move(movement Vec) {
+func (m *mob) Move(movement Vector) {
 	m.loc.x += movement.x
 	m.loc.y += movement.y
 }
@@ -217,7 +217,7 @@ func (m *mob) Attack(d Defender) (uint, bool) {
 	return 0, false
 }
 
-func (m *mob) MoveOrAct(movement Vec) bool {
+func (m *mob) MoveOrAct(movement Vector) bool {
 	destination := m.Loc().Add(movement)
 	if otherMob := m.dungeon.MobAt(destination); otherMob != nil {
 		if damageDealt, ok := m.Attack(otherMob); ok {

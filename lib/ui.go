@@ -45,7 +45,7 @@ type UI interface {
 	Paint()
 	DoEvent() (MobAction, GameState)
 
-	PointCameraAt(*Dungeon, Vec)
+	PointCameraAt(*Dungeon, Vector)
 
 	MessagesWanted() int
 	SetMessages([]string)
@@ -63,8 +63,8 @@ type CameraWidget interface {
 	Widget
 	Dungeon() *Dungeon
 	SetDungeon(*Dungeon)
-	Center() Vec
-	SetCenter(Vec)
+	Center() Vector
+	SetCenter(Vector)
 }
 
 // A LogWidget renders messages
@@ -84,12 +84,12 @@ type InventoryWidget interface {
 
 // Single tile Movement constants
 var (
-	MoveNorth     = Vec{0, -1}
-	MoveNorthEast = Vec{1, -1}
-	MoveEast      = Vec{1, 0}
-	MoveSouthEast = Vec{1, 1}
-	MoveSouth     = Vec{0, 1}
-	MoveSouthWest = Vec{-1, 1}
-	MoveWest      = Vec{-1, 0}
-	MoveNorthWest = Vec{-1, -1}
+	MoveNorth     = Vector{0, -1}
+	MoveNorthEast = Vector{1, -1}
+	MoveEast      = Vector{1, 0}
+	MoveSouthEast = Vector{1, 1}
+	MoveSouth     = Vector{0, 1}
+	MoveSouthWest = Vector{-1, 1}
+	MoveWest      = Vector{-1, 0}
+	MoveNorthWest = Vector{-1, -1}
 )

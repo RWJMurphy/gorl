@@ -28,7 +28,7 @@ type playerAction uint
 const (
 	ActNone playerAction = iota
 	ActWait
-	ActMove // target is a Vec to move
+	ActMove // target is a Vector to move
 	ActDrop // target is an Item to drop
 	ActDropAll
 	ActPickUpAll
@@ -103,9 +103,9 @@ func NewGame(log *log.Logger) (*Game, error) {
 	dungeon.AddMob(game.player)
 
 	for i := 0; i < 10; i++ {
-		dest := Vec{rand.Intn(dungeon.width), rand.Intn(dungeon.height)}
+		dest := Vector{rand.Intn(dungeon.width), rand.Intn(dungeon.height)}
 		for !(dungeon.Tile(dest).Crossable() && dungeon.FeatureGroup(dest).Crossable()) {
-			dest = Vec{rand.Intn(dungeon.width), rand.Intn(dungeon.height)}
+			dest = Vector{rand.Intn(dungeon.width), rand.Intn(dungeon.height)}
 		}
 		mob := NewMob(fmt.Sprintf("orc #%d", i), 'o', game.log, dungeon)
 		mob.SetVisionRadius(5)
@@ -135,7 +135,7 @@ func NewGame(log *log.Logger) (*Game, error) {
 func (game *Game) updatePlayerFOV() {
 	game.currentDungeon.ResetFlag(FlagLit | FlagVisible)
 	game.currentDungeon.CalculateLighting()
-	game.currentDungeon.OnTilesInLineOfSight(game.player.Loc(), game.player.VisionRadius(), func(t *Tile, loc Vec) {
+	game.currentDungeon.OnTilesInLineOfSight(game.player.Loc(), game.player.VisionRadius(), func(t *Tile, loc Vector) {
 		if t.Lit() {
 			t.flags |= FlagVisible | FlagSeen
 		}
@@ -147,7 +147,7 @@ func (game *Game) updatePlayerFOV() {
 //   * if there is a mob on the destination, attacks the mob and returns true
 //   * if not and destination is Crossable, moves the player there and returns true
 //   * if the destination is not Crossable, returns false
-func (game *Game) MoveOrAct(mob Mob, movement Vec) bool {
+func (game *Game) MoveOrAct(mob Mob, movement Vector) bool {
 	game.log.Printf("%s MoveOrAct'ing %s", mob, movement)
 	destination := mob.Loc().Add(movement)
 	if otherMob := game.currentDungeon.MobAt(destination); otherMob != nil {
@@ -174,7 +174,7 @@ func (game *Game) MoveOrAct(mob Mob, movement Vec) bool {
 }
 
 
-func (game *Game) EmitMessage(origin Vec, message string) {
+func (game *Game) EmitMessage(origin Vector, message string) {
 	if game.currentDungeon.Tile(origin).Visible() {
 		game.AddMessage(message)
 	} else {
@@ -269,7 +269,7 @@ func (game *Game) doMobAction (mob Mob, action MobAction) bool {
 			return false
 		}
 	case ActMove:
-		direction := action.target.(Vec)
+		direction := action.target.(Vector)
 		return game.MoveOrAct(mob, direction)
 	case ActNone:
 		return false

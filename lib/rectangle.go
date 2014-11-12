@@ -3,34 +3,34 @@ package gorl
 import "fmt"
 
 type RectangleI interface {
-	TopLeft() Vec
-	BottomRight() Vec
-	TopRight() Vec
-	BottomLeft() Vec
-	Size() Vec
+	TopLeft() Vector
+	BottomRight() Vector
+	TopRight() Vector
+	BottomLeft() Vector
+	Size() Vector
 	Width() int
 	Height() int
 }
 
 type Rectangle struct {
-	topLeft Vec
-	size    Vec
+	topLeft Vector
+	size    Vector
 }
 
-func (r Rectangle) TopLeft() Vec {
+func (r Rectangle) TopLeft() Vector {
 	return r.topLeft
 }
 
-func (r Rectangle) BottomRight() Vec {
-	return r.topLeft.Add(r.size).Add(Vec{-1, -1})
+func (r Rectangle) BottomRight() Vector {
+	return r.topLeft.Add(r.size).Add(Vector{-1, -1})
 }
 
-func (r Rectangle) TopRight() Vec {
-	return Vec{r.BottomRight().x, r.TopLeft().y}
+func (r Rectangle) TopRight() Vector {
+	return Vector{r.BottomRight().x, r.TopLeft().y}
 }
 
-func (r Rectangle) BottomLeft() Vec {
-	return Vec{r.TopLeft().x, r.BottomRight().y}
+func (r Rectangle) BottomLeft() Vector {
+	return Vector{r.TopLeft().x, r.BottomRight().y}
 }
 
 func (r Rectangle) Width() int {
@@ -41,7 +41,7 @@ func (r Rectangle) Height() int {
 	return r.size.y
 }
 
-func (r Rectangle) Size() Vec {
+func (r Rectangle) Size() Vector {
 	return r.size
 }
 

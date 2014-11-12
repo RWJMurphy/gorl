@@ -201,12 +201,16 @@ func (m *mob) RemoveFromInventory(item Item) bool {
 }
 
 func (m *mob) die() {
-	// on death, drop corpse
+	// on death, drop corpse, inventory
 	corpse := NewItem("corpse", '%', 100)
 	corpse.SetColor(termbox.ColorRed)
 	m.AddToInventory(corpse)
 	m.DropItem(corpse, m.dungeon)
 	m.log.Printf("%s dropped %s on death", m.Name(), corpse)
+	for _, item := range m.Inventory() {
+		m.DropItem(item, m.dungeon)
+		m.log.Printf("%s dropped %s on death", m.Name(), item)
+	}
 }
 
 func (m *mob) Dead() bool {

@@ -1,8 +1,8 @@
 package gorl
 
-func IntAbs(i int) int {
+func IntAbs(i int) uint {
 	if i < 0 {
 		i *= -1
 	}
-	return i
+	return uint(i)
 }

@@ -23,10 +23,10 @@ const (
 	GameClosed
 )
 
-type playerAction uint
+type mobAction uint
 
 const (
-	ActNone playerAction = iota
+	ActNone mobAction = iota
 	ActWait
 	ActMove // target is a Vector to move
 	ActDrop // target is an Item to drop
@@ -35,22 +35,24 @@ const (
 )
 
 type MobAction struct {
-	action playerAction
+	action mobAction
 	target interface{}
 }
 
-func (a playerAction) String() string {
+func (a mobAction) String() string {
 	switch a {
 	case ActNone:
 		return "ActNone"
 	case ActWait:
 		return "ActWait"
+	case ActMove:
+		return "ActMove"
 	case ActDropAll:
 		return "ActDropAll"
 	case ActPickUpAll:
 		return "ActPickUpAll"
 	default:
-		return fmt.Sprintf("playerAction(%d)", a)
+		return fmt.Sprintf("mobAction(%d)", a)
 	}
 }
 

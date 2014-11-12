@@ -78,9 +78,16 @@ func (m *mob) Tick(turn uint) MobAction {
 		m.log.Panicf("%s out of sync! Last ticked: %d, ticking: %d", m, m.lastTicked, turn)
 		return action
 	}
+
+	var (
+		enemies, items []Feature
+		focus          Feature
+		direction      Vector
+		minDistance    uint
+	)
+
 	m.lastTicked = turn
 	m.calculateFOV()
-	var enemies, items []Feature
 
 	for _, loc := range m.fov {
 		fg := m.dungeon.FeatureGroup(loc)
@@ -93,28 +100,39 @@ func (m *mob) Tick(turn uint) MobAction {
 			}
 		}
 	}
-	var direction Vector
+	// TODO
+	// * Prioritise based on distance of Features
 	if len(enemies) > 0 {
-		direction = enemies[0].Loc().Sub(m.Loc())
-		m.log.Printf("%s@%s targeting %s@%s", m.Name(), m.Loc(), enemies[0].Name(), enemies[0].Loc())
+		focus = enemies[0]
+		action.action = ActMove
+		minDistance = 1
 	} else if len(items) > 0 {
-		direction = items[0].Loc().Sub(m.Loc())
-		m.log.Printf("%s@%s targeting %s@%s", m.Name(), m.Loc(), items[0].Name(), items[0].Loc())
+		focus = items[0]
+		action.action = ActPickUpAll
+		minDistance = 0
+	}
+
+	if focus != nil {
+		m.log.Printf("%s@%s focusing on %s@%s", m.Name(), m.Loc(), focus.Name(), focus.Loc())
+		direction = focus.Loc().Sub(m.Loc())
+		if direction.Distance() > minDistance {
+			action.action = ActMove
+			direction = direction.Unit()
+		}
 	} else {
-		direction = Vector{rand.Intn(3)-1, rand.Intn(3)-1}
 		m.log.Printf("%s moving randomly", m.Name())
+		// Random movement would be better implemented by selecting from
+		// a list of valid directions
+		direction = Vector{rand.Intn(3)-1, rand.Intn(3)-1}
+		if direction.Distance() == 0 {
+			action.action = ActNone
+		} else {
+			action.action = ActMove
+		}
 	}
 
-	if direction.x != 0 {
-		direction.x = direction.x / IntAbs(direction.x)
-	}
-	if direction.y != 0 {
-		direction.y = direction.y / IntAbs(direction.y)
-	}
-	action.action = ActMove
 	action.target = direction
-
-	m.log.Printf("%s moving %s", m.Name(), direction)
+	m.log.Printf("%s %sing %s", m.Name(), action.action, direction)
 	return action
 }
 

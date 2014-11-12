@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"os"
-	"runtime"
+	// "runtime"
 
 	"github.com/RWJMurphy/gorl/lib"
 )
@@ -11,7 +11,7 @@ import (
 const logFilePath = "gorl.log"
 
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	// runtime.GOMAXPROCS(runtime.NumCPU())
 	logFile, err := os.OpenFile(
 		logFilePath,
 		os.O_RDWR|os.O_APPEND|os.O_CREATE,

@@ -6,7 +6,7 @@ import (
 
 func TestIntAbs(t *testing.T) {
 	tests := []struct {
-		in int
+		in   int
 		want uint
 	}{
 		{0, 0},

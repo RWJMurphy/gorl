@@ -39,7 +39,7 @@ type mob struct {
 	health     uint
 	baseAttack uint
 
-	fov        []Vector
+	fov []Vector
 
 	log *log.Logger
 }
@@ -123,7 +123,7 @@ func (m *mob) Tick(turn uint) MobAction {
 		m.log.Printf("%s moving randomly", m.Name())
 		// Random movement would be better implemented by selecting from
 		// a list of valid directions
-		direction = Vector{rand.Intn(3)-1, rand.Intn(3)-1}
+		direction = Vector{rand.Intn(3) - 1, rand.Intn(3) - 1}
 		if direction.Distance() == 0 {
 			action.action = ActNone
 		} else {
@@ -138,7 +138,7 @@ func (m *mob) Tick(turn uint) MobAction {
 
 func (m *mob) calculateFOV() {
 	fov := make([]Vector, 0)
-	m.dungeon.OnTilesInLineOfSight(m.loc, m.visionRadius, func(t *Tile, loc Vector){
+	m.dungeon.OnTilesInLineOfSight(m.loc, m.visionRadius, func(t *Tile, loc Vector) {
 		fov = append(fov, loc)
 	})
 	m.fov = fov

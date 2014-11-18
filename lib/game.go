@@ -175,7 +175,6 @@ func (game *Game) MoveOrAct(mob Mob, movement Vector) bool {
 	return true
 }
 
-
 func (game *Game) EmitMessage(origin Vector, message string) {
 	if game.currentDungeon.Tile(origin).Visible() {
 		game.AddMessage(message)
@@ -241,7 +240,7 @@ mainLoop:
 	}
 }
 
-func (game *Game) doMobAction (mob Mob, action MobAction) bool {
+func (game *Game) doMobAction(mob Mob, action MobAction) bool {
 	switch action.action {
 	case ActWait:
 		return true

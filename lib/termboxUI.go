@@ -30,7 +30,7 @@ type termboxUI struct {
 	dirty           bool
 	log             *log.Logger
 	// ugh this is hacky
-	stateAction     MobAction
+	stateAction MobAction
 }
 
 func NewTermboxUI(game *Game) (TermboxUI, error) {
@@ -226,7 +226,7 @@ func (ui *termboxUI) HandleKey(char rune, key termbox.Key) (MobAction, GameState
 		if char != 0 {
 			inventoryIndex := int(char - 'a')
 			inventory := ui.game.player.Inventory()
-			if inventoryIndex >= 0 &&  inventoryIndex < len(inventory) {
+			if inventoryIndex >= 0 && inventoryIndex < len(inventory) {
 				stateAction := ui.stateAction
 				stateAction.target = inventory[inventoryIndex]
 				ui.setState(StateGame, MobAction{ActNone, nil})

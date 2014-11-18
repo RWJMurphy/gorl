@@ -6,7 +6,7 @@ import (
 
 func TestDistance(t *testing.T) {
 	tests := []struct {
-		in Vector
+		in   Vector
 		want uint
 	}{
 		{Vector{0, 0}, 0},

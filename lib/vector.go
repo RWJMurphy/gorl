@@ -19,6 +19,10 @@ func (v Vector) Sub(other Vector) Vector {
 	return Vector{v.x - other.x, v.y - other.y}
 }
 
+func (v Vector) Mul(scalar int) Vector {
+	return Vector{v.x * scalar, v.y * scalar}
+}
+
 // Distance returns the number of moves the Vector covers
 func (v Vector) Distance() uint {
 	a := IntAbs(v.x)

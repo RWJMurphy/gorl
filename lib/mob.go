@@ -137,7 +137,7 @@ func (m *mob) Tick(turn uint) MobAction {
 }
 
 func (m *mob) calculateFOV() {
-	fov := make([]Vector, 0)
+	var fov []Vector
 	m.dungeon.OnTilesInLineOfSight(m.loc, m.visionRadius, func(t *Tile, loc Vector) {
 		fov = append(fov, loc)
 	})

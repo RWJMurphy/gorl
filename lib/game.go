@@ -268,10 +268,9 @@ func (game *Game) doMobAction(mob Mob, action MobAction) bool {
 				game.EmitMessage(mob.Loc(), fmt.Sprintf("%s picked up %s", mob.Name(), item.Name()))
 			}
 			return true
-		} else {
-			game.EmitMessage(mob.Loc(), fmt.Sprintf("Silly %s, there's nothing to pick up.", mob.Name()))
-			return false
 		}
+		game.EmitMessage(mob.Loc(), fmt.Sprintf("Silly %s, there's nothing to pick up.", mob.Name()))
+		return false
 	case ActMove:
 		direction := action.target.(Vector)
 		return game.MoveOrAct(mob, direction)

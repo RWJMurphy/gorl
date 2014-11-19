@@ -11,6 +11,10 @@ type widget struct {
 	ui TermboxUI
 }
 
+func (w *widget) String() string {
+	return fmt.Sprintf("<widget %s>", w.Rectangle)
+}
+
 // Paint paints the Widget to the UI
 func (w *widget) Paint() {
 	w.ui.PaintBorder(w, defaultBoxStyle)

@@ -39,52 +39,27 @@ func NewTermboxUI(game *Game) (TermboxUI, error) {
 		return nil, err
 	}
 
-	width, height := termbox.Size()
 	ui := &termboxUI{}
 	ui.game = game
 	ui.log = game.log
 	ui.messages = make([]string, 0, 10)
 	ui.logWidget = &logWidget{
-		widget{
-			Rectangle{
-				Vector{0, height - height/4},
-				Vector{width, height / 4},
-			},
-			ui,
-		},
+		widget{Rectangle{}, ui},
 		nil,
 	}
 	ui.cameraWidget = &cameraWidget{
-		widget{
-			Rectangle{
-				Vector{0, 0},
-				Vector{width - width/4, height - height/4},
-			},
-			ui,
-		},
+		widget{Rectangle{}, ui},
 		nil,
 		Vector{0, 0},
 	}
 	ui.menuWidget = &menuWidget{
-		widget{
-			Rectangle{
-				Vector{width - width/4, 0},
-				Vector{width / 4, height - height/4},
-			},
-			ui,
-		},
+		widget{Rectangle{}, ui},
 	}
 	ui.inventoryWidget = &inventoryWidget{
-		widget{
-			Rectangle{
-				Vector{0, 0},
-				Vector{width, height - height/4},
-			},
-			ui,
-		},
+		widget{Rectangle{}, ui},
 		game.player,
 	}
-	ui.MarkDirty()
+	ui.Resize()
 	ui.setState(StateGame, MobAction{ActNone, nil})
 	return ui, nil
 }
@@ -103,6 +78,11 @@ func (ui *termboxUI) Resize() {
 
 	ui.inventoryWidget.topLeft = Vector{0, 0}
 	ui.inventoryWidget.size = Vector{width, height - height/4}
+
+	ui.log.Println(ui.cameraWidget)
+	ui.log.Println(ui.menuWidget)
+	ui.log.Println(ui.logWidget)
+	ui.log.Println(ui.inventoryWidget)
 
 	ui.MarkDirty()
 }
@@ -363,15 +343,8 @@ func (ui *termboxUI) PaintBox(rect RectangleI, r rune) {
 	x1, y1 := rect.TopLeft().x, rect.TopLeft().y
 	x2, y2 := rect.BottomRight().x, rect.BottomRight().y
 
-	if x1 > x2 {
-		x1, x2 = x2, x1
-	}
-	if y1 > y2 {
-		y1, y2 = y2, y1
-	}
-
-	for x := x1; x <= x2; x++ {
-		for y := y1; y <= y2; y++ {
+	for x := x1; x < x2; x++ {
+		for y := y1; y < y2; y++ {
 			ui.PutRune(Vector{x, y}, r)
 		}
 	}
@@ -381,14 +354,8 @@ func (ui *termboxUI) PaintBox(rect RectangleI, r rune) {
 // with the runes defines by style.
 func (ui *termboxUI) PaintBorder(rect RectangleI, style boxStyle) {
 	x1, y1 := rect.TopLeft().x, rect.TopLeft().y
-	x2, y2 := rect.BottomRight().x, rect.BottomRight().y
+	x2, y2 := rect.BottomRight().x - 1, rect.BottomRight().y - 1
 
-	if x1 > x2 {
-		x1, x2 = x2, x1
-	}
-	if y1 > y2 {
-		y1, y2 = y2, y1
-	}
 	if err := mergo.Merge(&style, defaultBoxStyle); err != nil {
 		ui.log.Panic(err)
 	}
@@ -400,9 +367,9 @@ func (ui *termboxUI) PaintBorder(rect RectangleI, style boxStyle) {
 	ui.PaintBox(Rectangle{Vector{x2, y1 + 1}, Vector{1, rect.Height() - 2}}, style.vertical)
 
 	ui.PutRune(rect.TopLeft(), style.corner)
-	ui.PutRune(rect.TopRight(), style.corner)
-	ui.PutRune(rect.BottomRight(), style.corner)
-	ui.PutRune(rect.BottomLeft(), style.corner)
+	ui.PutRune(rect.TopRight().Sub(Vector{1, 0}), style.corner)
+	ui.PutRune(rect.BottomRight().Sub(Vector{1, 1}), style.corner)
+	ui.PutRune(rect.BottomLeft().Sub(Vector{0, 1}), style.corner)
 }
 
 type boxStyle struct {

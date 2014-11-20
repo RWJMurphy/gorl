@@ -81,17 +81,19 @@ type Game struct {
 	state          GameState
 	turn           uint
 	log            *log.Logger
+	dice           *rand.Rand
 }
 
 // NewGame initializes and returns a new Game. Or an error. You should check that.
 // Please `defer game.Close()`.
-func NewGame(log *log.Logger) (*Game, error) {
+func NewGame(log *log.Logger, dice *rand.Rand) (*Game, error) {
 	game := &Game{}
+	game.dice = dice
 	game.log = log
 	game.messages = make([]string, 0, 10)
 	game.turn = 0
 
-	dungeon := GenerateDungeon(log)
+	dungeon := GenerateDungeon(log, dice)
 	game.dungeons = make([]*Dungeon, 0, 10)
 	game.dungeons = append(game.dungeons, dungeon)
 
@@ -105,9 +107,9 @@ func NewGame(log *log.Logger) (*Game, error) {
 	dungeon.AddMob(game.player)
 
 	for i := 0; i < 10; i++ {
-		dest := Vector{rand.Intn(dungeon.width), rand.Intn(dungeon.height)}
+		dest := Vector{game.dice.Intn(dungeon.width), game.dice.Intn(dungeon.height)}
 		for !(dungeon.Tile(dest).Crossable() && dungeon.FeatureGroup(dest).Crossable()) {
-			dest = Vector{rand.Intn(dungeon.width), rand.Intn(dungeon.height)}
+			dest = Vector{game.dice.Intn(dungeon.width), game.dice.Intn(dungeon.height)}
 		}
 		mob := NewMob(fmt.Sprintf("orc #%d", i), 'o', game.log, dungeon)
 		mob.SetVisionRadius(100)
@@ -291,7 +293,7 @@ func (game *Game) WorldTick() {
 	changed := false
 	var mobAction MobAction
 	for _, mob := range game.currentDungeon.Mobs() {
-		mobAction = mob.Tick(game.turn)
+		mobAction = mob.Tick(game.turn, game.dice)
 		changed = game.doMobAction(mob, mobAction) || changed
 	}
 	if changed {

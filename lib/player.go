@@ -1,6 +1,9 @@
 package gorl
 
-import "log"
+import (
+	"log"
+	"math/rand"
+)
 
 // Player represents the player -- it's basically a special form of Mob
 type Player interface {
@@ -30,7 +33,7 @@ func NewPlayer(log *log.Logger, dungeon *Dungeon) Player {
 
 // XXX Should I move input handling here? Or does that couple the Player
 // to the UI too closely? Argh.
-func (p *player) Tick(turn uint) MobAction {
+func (p *player) Tick(turn uint, dice *rand.Rand) MobAction {
 	p.lastTicked = turn
 	return MobAction{ActNone, nil}
 }

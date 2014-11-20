@@ -17,7 +17,7 @@ type Mob interface {
 	SetVisionRadius(int)
 	VisionRadius() int
 	Move(Vector)
-	Tick(uint) MobAction
+	Tick(uint, *rand.Rand) MobAction
 
 	Inventory() []Item
 	AddToInventory(Item) bool
@@ -69,7 +69,7 @@ func (m *mob) String() string {
 	)
 }
 
-func (m *mob) Tick(turn uint) MobAction {
+func (m *mob) Tick(turn uint, dice *rand.Rand) MobAction {
 	action := MobAction{ActNone, nil}
 	if m.Dead() {
 		return action
@@ -123,7 +123,7 @@ func (m *mob) Tick(turn uint) MobAction {
 		m.log.Printf("%s moving randomly", m.Name())
 		// Random movement would be better implemented by selecting from
 		// a list of valid directions
-		direction = Vector{rand.Intn(3) - 1, rand.Intn(3) - 1}
+		direction = Vector{dice.Intn(3) - 1, dice.Intn(3) - 1}
 		if direction.Distance() == 0 {
 			action.action = ActNone
 		} else {

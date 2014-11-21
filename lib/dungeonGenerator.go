@@ -9,13 +9,13 @@ import (
 
 type dungeonRoom struct {
 	width, height int
-	portals []Vector
-	tiles [][]Tile
+	portals       []Vector
+	tiles         [][]Tile
 }
 
 func newDungeonRoom(width, height int, dice *rand.Rand) *dungeonRoom {
 	tiles := make([][]Tile, height)
-	tilesRaw := make([]Tile, width * height)
+	tilesRaw := make([]Tile, width*height)
 	for i := range tilesRaw {
 		tilesRaw[i] = NewTile('.', termbox.ColorWhite, Flag(0)|FlagCrossable)
 	}
@@ -37,7 +37,7 @@ func newDungeonRoom(width, height int, dice *rand.Rand) *dungeonRoom {
 	}
 
 	var portals []Vector
-	for i := 1; i < 1 + dice.Intn(4); i++ {
+	for i := 1; i < 1+dice.Intn(4); i++ {
 		portals = append(portals, edgeTiles[dice.Intn(len(edgeTiles))])
 	}
 	room := dungeonRoom{
@@ -49,7 +49,7 @@ func newDungeonRoom(width, height int, dice *rand.Rand) *dungeonRoom {
 	return &room
 }
 
-func (d *Dungeon) paintRoom (room *dungeonRoom, topLeft Vector) []Vector {
+func (d *Dungeon) paintRoom(room *dungeonRoom, topLeft Vector) []Vector {
 	// TODO: support different orientations by changing order tiles iterated
 	for x := 0; x < room.width; x++ {
 		for y := 0; y < room.height; y++ {
@@ -84,7 +84,7 @@ func GenerateDungeon(log *log.Logger, dice *rand.Rand) *Dungeon {
 	roomCount := dice.Intn(10) + 10
 	var portals []Vector
 	for i := 0; i < roomCount; i++ {
-		roomWidth, roomHeight := dice.Intn(10) + 10, dice.Intn(10) + 10
+		roomWidth, roomHeight := dice.Intn(10)+10, dice.Intn(10)+10
 		topLeft := Vector{
 			dice.Intn(width - roomWidth),
 			dice.Intn(height - roomHeight),

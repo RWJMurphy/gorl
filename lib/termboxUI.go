@@ -354,7 +354,7 @@ func (ui *termboxUI) PaintBox(rect RectangleI, r rune) {
 // with the runes defines by style.
 func (ui *termboxUI) PaintBorder(rect RectangleI, style boxStyle) {
 	x1, y1 := rect.TopLeft().x, rect.TopLeft().y
-	x2, y2 := rect.BottomRight().x - 1, rect.BottomRight().y - 1
+	x2, y2 := rect.BottomRight().x-1, rect.BottomRight().y-1
 
 	if err := mergo.Merge(&style, defaultBoxStyle); err != nil {
 		ui.log.Panic(err)

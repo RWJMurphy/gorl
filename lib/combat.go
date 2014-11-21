@@ -9,3 +9,16 @@ type Defender interface {
 	AttackedFor(uint) uint
 	Dead() bool
 }
+
+type Wielder interface {
+	WieldPoints() []string
+	Wielding() []Wieldable
+
+	Wield(Wieldable, uint) bool
+	Unwield(uint) bool
+}
+
+type Wieldable interface {
+	Item
+	AttackStrength() uint
+}

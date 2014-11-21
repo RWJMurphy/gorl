@@ -1,6 +1,7 @@
 package gorl
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -13,6 +14,7 @@ type Mob interface {
 	Feature
 	Attacker
 	Defender
+	Wielder
 
 	SetVisionRadius(int)
 	VisionRadius() int
@@ -35,9 +37,14 @@ type mob struct {
 	dungeon    *Dungeon
 	lastTicked uint
 
-	maxHealth  uint
-	health     uint
+	// Defender
+	maxHealth uint
+	health    uint
+	// Attacker
 	baseAttack uint
+	// Wielder
+	wieldPoints []string
+	wielding    []Wieldable
 
 	fov []Vector
 
@@ -46,12 +53,19 @@ type mob struct {
 
 const MobDefaultHealth = 10
 const MobDefaultAttack = 2
+var MobDefaultWieldPoints = []string{
+	"right hand",
+	"left hand",
+}
 
 // NewMob creates and returns a new Mob
 func NewMob(name string, char rune, log *log.Logger, dungeon *Dungeon) Mob {
 	m := &mob{}
 	m.feature = *NewFeature(name, char).(*feature)
 	m.inventory = make([]Item, 0)
+	m.wieldPoints = make([]string, len(MobDefaultWieldPoints))
+	copy(m.wieldPoints, MobDefaultWieldPoints)
+	m.wielding = make([]Wieldable, len(m.wieldPoints))
 	m.log = log
 	m.maxHealth = MobDefaultHealth
 	m.health = m.maxHealth
@@ -113,6 +127,7 @@ func (m *mob) Tick(turn uint, dice *rand.Rand) MobAction {
 	}
 
 	if focus != nil {
+		// TODO Pathfinding
 		m.log.Printf("%s@%s focusing on %s@%s", m.Name(), m.Loc(), focus.Name(), focus.Loc())
 		direction = focus.Loc().Sub(m.Loc())
 		if direction.Distance() > minDistance {
@@ -189,15 +204,23 @@ func (m *mob) DropItem(item Item, d *Dungeon) bool {
 }
 
 func (m *mob) RemoveFromInventory(item Item) bool {
-	for i, inventoryItem := range m.inventory {
-		if inventoryItem == item {
-			copy(m.inventory[i:], m.inventory[i+1:])
-			m.inventory[len(m.inventory)-1] = nil
-			m.inventory = m.inventory[:len(m.inventory)-1]
-			return true
-		}
+	index, err := m.InventoryIndex(item)
+	if err == nil {
+		copy(m.inventory[index:], m.inventory[index+1:])
+		m.inventory[len(m.inventory)-1] = nil
+		m.inventory = m.inventory[:len(m.inventory)-1]
+		return true
 	}
 	return false
+}
+
+func (m *mob) InventoryIndex(item Item) (int, error) {
+	for index, inventoryItem := range m.inventory {
+		if inventoryItem == item {
+			return index, nil
+		}
+	}
+	return -1, errors.New(fmt.Sprintf("Not carrying %s", item))
 }
 
 func (m *mob) die() {
@@ -217,28 +240,6 @@ func (m *mob) Dead() bool {
 	return m.health <= 0
 }
 
-func (m *mob) AttackStrength() uint {
-	return m.baseAttack
-}
-
-func (m *mob) AttackedFor(damage uint) uint {
-	if damage >= m.health {
-		m.health = 0
-		m.die()
-	} else {
-		m.health -= damage
-	}
-	return damage
-}
-
-func (m *mob) Attack(d Defender) (uint, bool) {
-	if !d.Dead() {
-		damageDealt := d.AttackedFor(m.AttackStrength())
-		return damageDealt, true
-	}
-	return 0, false
-}
-
 func (m *mob) MoveOrAct(movement Vector) bool {
 	destination := m.Loc().Add(movement)
 	if otherMob := m.dungeon.MobAt(destination); otherMob != nil {
@@ -253,5 +254,73 @@ func (m *mob) MoveOrAct(movement Vector) bool {
 	} else if moved := m.dungeon.MoveMob(m, movement); !moved {
 		return false
 	}
+	return true
+}
+
+// Defender
+func (m *mob) AttackStrength() uint {
+	for _, weapon := range m.wielding {
+		if weapon != nil {
+			return weapon.AttackStrength()
+		}
+	}
+	return m.baseAttack
+}
+
+func (m *mob) AttackedFor(damage uint) uint {
+	if damage >= m.health {
+		m.health = 0
+		m.die()
+	} else {
+		m.health -= damage
+	}
+	return damage
+}
+
+// Attacker
+func (m *mob) Attack(d Defender) (uint, bool) {
+	if !d.Dead() {
+		damageDealt := d.AttackedFor(m.AttackStrength())
+		return damageDealt, true
+	}
+	return 0, false
+}
+
+// Wielder
+func (m *mob) WieldPoints() []string {
+	return m.wieldPoints
+}
+func (m *mob) Wielding() []Wieldable {
+	return m.wielding
+}
+
+func (m *mob) Wield(weapon Wieldable, slot uint) bool {
+	if _, err := m.InventoryIndex(weapon); err != nil {
+		m.log.Println(err)
+		return false
+	}
+	if m.wielding[slot] != nil {
+		m.log.Printf(
+			"%s tried to wield %s in slot %d, but is already wielding %s",
+			m, weapon, slot, m.wielding[slot],
+		)
+		return false
+	}
+	m.RemoveFromInventory(weapon)
+	m.wielding[slot] = weapon
+	return true
+}
+
+func (m *mob) Unwield(slot uint) bool {
+	weapon := m.wielding[slot]
+	if weapon == nil {
+		m.log.Printf(
+			"%s tried to unwield slot %d, but is not wielding anything there",
+			m, slot,
+		)
+		return false
+	}
+	m.AddToInventory(weapon)
+	m.wielding[slot] = nil
 	return true
 }

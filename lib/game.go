@@ -104,6 +104,10 @@ func NewGame(log *log.Logger, dice *rand.Rand) (*Game, error) {
 	torch.SetLightRadius(20)
 	game.player.AddToInventory(torch)
 
+	sword := NewWeapon("sword", ']', 5, 10)
+	game.player.AddToInventory(sword)
+	game.player.Wield(sword, 0)
+
 	dungeon.AddMob(game.player)
 
 	for i := 0; i < 10; i++ {
